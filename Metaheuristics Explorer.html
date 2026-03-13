@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Metaheuristics Explorer</title>
+<style>
+  body { font-family: Arial; margin:0; background:#eef4ff; }
+  header {
+    background: linear-gradient(90deg, #243bff, #7b2cff);
+    color:white;
+    padding:15px;
+  }
+  .container { display:flex; height:82vh; }
+  .left, .right { width:24%; padding:15px; background:#ffffff; overflow:auto; border-radius:12px; box-shadow: 0 6px 18px rgba(20, 30, 60, 0.10); }
+  .center { flex:1; padding:10px; overflow:auto; border-radius:12px; }
+  canvas { background:white; border:1px solid #ccc; display:block; margin-bottom:10px; border-radius:12px; }
+  button {
+    margin:5px 0; width:100%;
+    border:none; padding:10px 12px; border-radius:10px;
+    background:#243bff; color:#fff; font-weight:600; cursor:pointer;
+  }
+  button:hover { filter: brightness(0.92); }
+
+  .log { font-size:12px; height:220px; overflow:auto; border:1px solid #ccc; padding:5px; background:#ffffff; border-radius:10px;}
+  .batch { font-size:12px; height:200px; overflow:auto; border:1px solid #cddcff; padding:5px; background:#f3f7ff; margin-top:10px; border-radius:10px; }
+  .smallnote { font-size:11px; color:#555; margin-top:8px; line-height:1.45; }
+  label { font-size:12px; color:#222; }
+  input, select { width:100%; box-sizing:border-box; margin:4px 0 10px 0; }
+  .row { display:flex; gap:8px; }
+  .row > div { flex:1; }
+  .hint { font-size:11px; color:#666; margin-top:-6px; margin-bottom:10px; line-height:1.35; }
+  .sep { border-top:1px solid #eee; margin:10px 0; }
+  .panelTitle { margin:0 0 8px 0; }
+  .analysisBox { font-size:12px; border:1px solid #d7e4ff; background:#f8fbff; padding:8px; line-height:1.45; border-radius:10px; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+
+  /* NEW: Algorithm Selection header */
+  .panelH3 { margin: 6px 0 8px 0; font-size:16px; }
+
+  /* NEW: seed row layout */
+  .seedRow { display:flex; gap:8px; align-items:center; }
+  .seedRow input[type="number"] { flex:1; margin:4px 0 10px 0; }
+  .seedManual { white-space:nowrap; font-size:12px; color:#222; margin:0; }
+</style>
+</head>
+<body>
+
+<header>
+  <h2 style="margin:0 0 6px 0;">Metaheuristics Explorer</h2>
+  <div style="font-size:14px;">
+    Bit encoding + Bit-flip neighborhood | Iterative Improvement / Simulated Annealing / Tabu Search
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="left">
+    <h3 style="margin-top:0;">Problem & Controls</h3>
+
+    <label>Bit Length</label>
+    <input type="number" id="bitLength" value="5" min="2" max="12">
+    <div class="hint">Search space: x ∈ [0, 2^bits − 1]</div>
+
+    <div class="sep"></div>
+
+    <h4 class="panelTitle">Objective: f(x) = a x³ + b x² + c x + d</h4>
+
+    <div class="row">
+      <div>
+        <label>a (x³)</label>
+        <input type="number" id="coefA" value="1" step="1">
+      </div>
+      <div>
+        <label>b (x²)</label>
+        <input type="number" id="coefB" value="-60" step="1">
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>c (x)</label>
+        <input type="number" id="coefC" value="900" step="1">
+      </div>
+      <div>
+        <label>d (const)</label>
+        <input type="number" id="coefD" value="100" step="1">
+      </div>
+    </div>
+
+    <button onclick="applyObjective()">Apply Objective</button>
+    <button onclick="analyzeLandscape()">Analyze Landscape (Global / Local Max)</button>
+    <div class="hint">
+      • Apply：更新係數並重畫 landscape<br>
+      • Analyze：掃描整個空間找 global optimum 與 local maxima（bit-flip 鄰域）
+    </div>
+
+    <div class="analysisBox" id="analysisBox">
+      <b>Landscape Analysis</b><br>
+      (按下 Analyze Landscape 後顯示)
+    </div>
+
+    <div class="sep"></div>
+
+    <!-- NEW: clearer section header -->
+    <h3 class="panelH3">Algorithm Selection</h3>
+
+    <label>Algorithm</label>
+    <select id="algo">
+      <option value="II">Iterative Improvement</option>
+      <option value="SA">Simulated Annealing</option>
+      <option value="TS">Tabu Search</option>
+    </select>
+
+    <label>Initial x</label>
+    <input type="number" id="initX" value="0">
+
+    <div class="sep"></div>
+
+    <h4 class="panelTitle">SA Parameters</h4>
+    <label>T0</label>
+    <input type="number" id="T0" value="50" step="1">
+    <label>alpha (cooling)</label>
+    <input type="number" id="alpha" value="0.95" step="0.01" min="0.5" max="0.999">
+
+    <div class="sep"></div>
+
+    <h4 class="panelTitle">TS Parameters</h4>
+    <label>Tabu size</label>
+    <input type="number" id="tabuSize" value="5" min="1">
+
+    <div class="sep"></div>
+
+    <button onclick="init()">Reset</button>
+    <button onclick="stepOnce()">Step</button>
+    <button onclick="run()">Auto Run</button>
+    <button onclick="stop()">Stop</button>
+
+    <div class="hint" style="margin-top:8px;">
+      建議教學：先用 II 看卡住，再切 SA/TS 看 escape。
+    </div>
+
+    <h4 class="panelTitle">Batch Test</h4>
+    <label>Max iterations (per run)</label>
+    <input type="number" id="batchMaxIter" value="500" min="1">
+    <label>Number of runs</label>
+    <input type="number" id="batchRuns" value="10" min="1">
+
+    <!-- NEW: seed with manual checkbox -->
+    <label>Random seed</label>
+    <div class="seedRow">
+      <input type="number" id="batchSeed" value="41" step="1" disabled>
+      <label class="seedManual">
+        <input type="checkbox" id="seedManual" onchange="toggleSeedManual()"> 手動
+      </label>
+    </div>
+    <div class="hint" id="seedHint">未勾選「手動」：每次 Batch 自動產生隨機 seed。</div>
+
+    <button onclick="runBatch()">Run Batch (selected algorithm)</button>
+    <div class="hint">
+      • 每次 run 會從隨機初始解開始（可重現：由 seed 決定）<br>
+      • SA/TS 會回報 best-so-far（不一定是最後一代）
+    </div>
+
+  </div>
+
+  <div class="center">
+    <canvas id="landscape" width="780" height="260"></canvas>
+    <canvas id="convergence" width="780" height="200"></canvas>
+    <canvas id="temperature" width="780" height="170"></canvas>
+  </div>
+
+  <div class="right">
+    <h3 style="margin-top:0;">Log</h3>
+    <div class="log" id="log"></div>
+
+    <h3 style="margin:12px 0 6px 0;">Batch Results</h3>
+    <div class="batch" id="batch"></div>
+
+    <div class="smallnote">
+      <b>Symbol Explanation</b><br>
+      <b>x</b>: current solution (decoded integer)<br>
+      <b>bits</b>: binary encoding of x (length = bitLength)<br>
+      <b>f</b>: objective value f(x)<br>
+      <b>best</b>: best-so-far objective value<br>
+      <b>Δ</b>: f(neighbor) − f(current) (SA step shows it)<br>
+      <b>T</b>: temperature (SA only; cooled by T ← α·T)<br>
+      <b>p</b>: acceptance probability exp(Δ/T) (Δ&lt;0)<br>
+      <b>r</b>: random draw in [0,1] (accept if r &lt; p)<br>
+      <b>tabu</b>: forbidden recent states (TS memory)
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* =========================================================
+   Global settings
+========================================================= */
+let bitLength = 5;
+let maxX = 31;
+
+// objective coefficients
+let A = 1, B = -60, C = 900, D = 100;
+
+// analysis results for drawing
+let globalOptX = null;
+let globalOptF = null;
+let localMaxima = []; // list of x that are local maxima (bit-flip neighborhood)
+
+/* =========================================================
+   RNG: deterministic (LCG) for batch reproducibility
+========================================================= */
+function makeLCG(seed){
+  let state = (seed >>> 0);
+  return {
+    nextU32: function(){
+      state = (Math.imul(1664525, state) + 1013904223) >>> 0;
+      return state;
+    },
+    next: function(){
+      return this.nextU32() / 4294967296;
+    },
+    nextInt: function(lo, hiInclusive){
+      const r = this.next();
+      const span = hiInclusive - lo + 1;
+      return lo + Math.floor(r * span);
+    }
+  };
+}
+
+/* =========================================================
+   UI helpers
+========================================================= */
+function updateBitSettings(){
+  bitLength = parseInt(document.getElementById("bitLength").value || "5");
+  bitLength = Math.max(2, Math.min(12, bitLength));
+  maxX = (1 << bitLength) - 1;
+
+  const initXInput = document.getElementById("initX");
+  initXInput.min = 0;
+  initXInput.max = maxX;
+
+  const tabuInput = document.getElementById("tabuSize");
+  tabuInput.max = maxX + 1;
+}
+
+function setAnalysisBox(html){
+  document.getElementById("analysisBox").innerHTML =
+    `<b>Landscape Analysis</b><br>${html}`;
+}
+
+function log(msg){
+  const div = document.getElementById("log");
+  div.innerHTML += msg + "<br>";
+  div.scrollTop = div.scrollHeight;
+}
+function logClear(){ document.getElementById("log").innerHTML=""; }
+
+function batchClear(){
+  document.getElementById("batch").innerHTML = "";
+}
+function batchAppend(html){
+  const div = document.getElementById("batch");
+  div.innerHTML += html + "<br>";
+  div.scrollTop = div.scrollHeight;
+}
+
+/* NEW: manual seed toggle */
+function toggleSeedManual(){
+  const manual = document.getElementById("seedManual").checked;
+  const seedBox = document.getElementById("batchSeed");
+  seedBox.disabled = !manual;
+  document.getElementById("seedHint").textContent =
+    manual
+      ? "已勾選「手動」：使用你輸入的 seed（可重現）。"
+      : "未勾選「手動」：每次 Batch 自動產生隨機 seed。";
+}
+
+/* =========================================================
+   Objective
+========================================================= */
+function applyObjective(){
+  A = parseFloat(document.getElementById("coefA").value || "0");
+  B = parseFloat(document.getElementById("coefB").value || "0");
+  C = parseFloat(document.getElementById("coefC").value || "0");
+  D = parseFloat(document.getElementById("coefD").value || "0");
+
+  // analysis markers become stale; clear them until re-analyzed
+  globalOptX = null;
+  globalOptF = null;
+  localMaxima = [];
+  setAnalysisBox("(係數已更新；請按 Analyze Landscape 重新計算 global/local maxima)");
+
+  log(`Apply Objective | f(x) = ${A}x^3 + ${B}x^2 + ${C}x + ${D}`);
+  drawLandscape();
+}
+
+function applyObjectiveSilently(){
+  A = parseFloat(document.getElementById("coefA").value || "0");
+  B = parseFloat(document.getElementById("coefB").value || "0");
+  C = parseFloat(document.getElementById("coefC").value || "0");
+  D = parseFloat(document.getElementById("coefD").value || "0");
+}
+
+function f(x){
+  return A*x*x*x + B*x*x + C*x + D;
+}
+
+/* =========================================================
+   Neighborhood & encoding
+========================================================= */
+function neighbors(x){
+  const n = [];
+  for(let i=0;i<bitLength;i++){
+    const y = x ^ (1<<i);
+    if(y>=0 && y<=maxX) n.push(y);
+  }
+  return n;
+}
+function bitsOf(x){
+  return x.toString(2).padStart(bitLength,'0');
+}
+
+/* =========================================================
+   Landscape Analysis
+========================================================= */
+function analyzeLandscape(){
+  updateBitSettings();
+  applyObjectiveSilently();
+
+  let bestX = 0;
+  let bestF = f(0);
+
+  const locals = [];
+
+  // Precompute all f(x) for speed
+  const vals = new Array(maxX+1);
+  for(let x=0;x<=maxX;x++){
+    const fx = f(x);
+    vals[x] = fx;
+    if(fx > bestF){
+      bestF = fx;
+      bestX = x;
+    }
+  }
+
+  // local maxima under bit-flip neighborhood:
+  for(let x=0;x<=maxX;x++){
+    const fx = vals[x];
+    const neigh = neighbors(x);
+    let isLocal = true;
+    for(const y of neigh){
+      if(vals[y] > fx){
+        isLocal = false;
+        break;
+      }
+    }
+    if(isLocal) locals.push(x);
+  }
+
+  // Top-K local maxima by f (descending)
+  const K = 10;
+  const top = locals
+    .map(x => ({x, fx: vals[x]}))
+    .sort((p,q) => q.fx - p.fx)
+    .slice(0, K);
+
+  globalOptX = bestX;
+  globalOptF = bestF;
+  localMaxima = locals;
+
+  const topLines = top.map((p, idx) =>
+    `${idx+1}. x=${p.x} (${bitsOf(p.x)}) , f=${p.fx.toFixed(3)}`
+  ).join("<br>");
+
+  setAnalysisBox(
+    `bits=${bitLength}, space=[0..${maxX}]<br>` +
+    `<span class="mono">Global optimum</span>: x*=${bestX} (${bitsOf(bestX)}), f*=${bestF.toFixed(3)}<br>` +
+    `<span class="mono">Local maxima</span> (bit-flip): ${locals.length}<br>` +
+    `<span class="mono">Top-${K} local maxima</span>:<br>${topLines}`
+  );
+
+  log(`Analyze | global x*=${bestX} (${bitsOf(bestX)}), f*=${bestF.toFixed(3)} | local maxima=${locals.length}`);
+  drawLandscape();
+}
+
+/* =========================================================
+   Interactive mode state
+========================================================= */
+let current, best, iter, T;
+let tabuList = [];
+let currentHistory = [], bestHistory = [], tempHistory = [];
+let running = false;
+
+function init(){
+  updateBitSettings();
+  applyObjectiveSilently();
+
+  current = clamp(parseInt(document.getElementById("initX").value || "0"), 0, maxX);
+  best = current;
+  iter = 0;
+
+  T = parseFloat(document.getElementById("T0").value || "50");
+  if(!isFinite(T) || T<=0) T = 50;
+
+  tabuList = [];
+  currentHistory = [];
+  bestHistory = [];
+  tempHistory = [];
+
+  logClear();
+  log(`Reset | bits=${bitLength} | x=${current} (${bitsOf(current)}) | f=${f(current).toFixed(3)} | T=${T.toFixed(4)}`);
+  drawAll();
+}
+
+function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+
+/* =========================================================
+   Interactive: one step (uses Math.random)
+========================================================= */
+function stepOnce(){
+  const algo = document.getElementById("algo").value;
+  const neigh = neighbors(current);
+
+  let next = current;
+  let accepted = false;
+  let note = "";
+
+  if(algo === "II"){
+    let bestN = current;
+    for(const y of neigh){
+      if(f(y) > f(bestN)) bestN = y;
+    }
+    if(f(bestN) > f(current)){
+      next = bestN; accepted = true; note="improve";
+    }else{
+      note="stuck (local optimum)";
+    }
+    tempHistory.push(NaN);
+  }
+
+  if(algo === "SA"){
+    const alpha = parseFloat(document.getElementById("alpha").value || "0.95");
+    const a = (isFinite(alpha) ? alpha : 0.95);
+
+    const y = neigh[Math.floor(Math.random()*neigh.length)];
+    const delta = f(y) - f(current);
+
+    if(delta > 0){
+      next = y; accepted = true;
+      note = `better (Δ=${delta.toFixed(3)})`;
+    }else{
+      const p = Math.exp(delta / T);
+      const r = Math.random();
+      if(r < p){
+        next = y; accepted = true;
+        note = `worse accepted (Δ=${delta.toFixed(3)}, p=${p.toFixed(4)}, r=${r.toFixed(4)})`;
+      }else{
+        note = `worse rejected (Δ=${delta.toFixed(3)}, p=${p.toFixed(4)}, r=${r.toFixed(4)})`;
+      }
+    }
+
+    tempHistory.push(T);
+    T = T * a;
+    if(T < 1e-12) T = 1e-12;
+  }
+
+  if(algo === "TS"){
+    const size = clamp(parseInt(document.getElementById("tabuSize").value || "5"), 1, maxX+1);
+
+    let bestN = null;
+    for(const y of neigh){
+      if(!tabuList.includes(y)){
+        if(bestN === null || f(y) > f(bestN)) bestN = y;
+      }
+    }
+
+    if(bestN !== null){
+      next = bestN; accepted = true;
+      tabuList.push(current);
+      if(tabuList.length > size) tabuList.shift();
+      note = `move; tabu=[${tabuList.join(", ")}]`;
+    }else{
+      note = "all neighbors tabu (increase tabu size? / add aspiration?)";
+    }
+    tempHistory.push(NaN);
+  }
+
+  if(accepted){
+    current = next;
+    if(f(current) > f(best)) best = current;
+  }
+
+  currentHistory.push(f(current));
+  bestHistory.push(f(best));
+  iter++;
+
+  const tStr = (algo==="SA") ? T.toFixed(4) : "-";
+  log(`Iter ${iter} | x=${current} (${bitsOf(current)}) | f=${f(current).toFixed(3)} | best=${f(best).toFixed(3)} | T=${tStr} | ${note}`);
+
+  drawAll();
+}
+
+/* =========================================================
+   Interactive: auto-run
+========================================================= */
+function run(){
+  running = true;
+  const maxIter = 400;
+  const delayMs = 140;
+
+  function loop(){
+    if(!running) return;
+    if(iter >= maxIter){
+      running = false;
+      log(`Stop: reached maxIter=${maxIter}`);
+      return;
+    }
+    stepOnce();
+    setTimeout(loop, delayMs);
+  }
+  loop();
+}
+function stop(){ running = false; }
+
+/* =========================================================
+   Batch core runner (deterministic via rng)
+   - returns best-so-far (for SA/TS)
+========================================================= */
+function runSingle(algo, params, maxIter, initX, rng){
+  let cur = initX;
+  let bestX = initX;
+  let bestF = f(initX);
+
+  // SA state
+  let Tlocal = params.T0;
+  const alpha = params.alpha;
+
+  // TS state
+  const tabuSize = params.tabuSize;
+  let tabu = [];
+
+  for(let it=0; it<maxIter; it++){
+    const neigh = neighbors(cur);
+
+    if(algo === "II"){
+      let bestN = cur;
+      for(const y of neigh){
+        if(f(y) > f(bestN)) bestN = y;
+      }
+      if(f(bestN) > f(cur)){
+        cur = bestN;
+      }
+    }
+
+    if(algo === "SA"){
+      const y = neigh[rng.nextInt(0, neigh.length-1)];
+      const delta = f(y) - f(cur);
+      if(delta > 0){
+        cur = y;
+      }else{
+        const p = Math.exp(delta / Tlocal);
+        const r = rng.next();
+        if(r < p) cur = y;
+      }
+      // update best-so-far AFTER move
+      const fc = f(cur);
+      if(fc > bestF){ bestF = fc; bestX = cur; }
+
+      // cool
+      Tlocal = Tlocal * alpha;
+      if(Tlocal < 1e-12) Tlocal = 1e-12;
+
+      continue;
+    }
+
+    if(algo === "TS"){
+      let bestN = null;
+      for(const y of neigh){
+        if(!tabu.includes(y)){
+          if(bestN === null || f(y) > f(bestN)) bestN = y;
+        }
+      }
+      if(bestN !== null){
+        tabu.push(cur);
+        if(tabu.length > tabuSize) tabu.shift();
+        cur = bestN;
+      }else{
+        // fallback random move if everything tabu
+        const y = neigh[rng.nextInt(0, neigh.length-1)];
+        cur = y;
+      }
+    }
+
+    const fc = f(cur);
+    if(fc > bestF){ bestF = fc; bestX = cur; }
+  }
+
+  return { bestX, bestF };
+}
+
+/* =========================================================
+   Batch runner
+========================================================= */
+function runBatch(){
+  updateBitSettings();
+  applyObjectiveSilently();
+
+  const algo = document.getElementById("algo").value;
+
+  const maxIter = Math.max(1, parseInt(document.getElementById("batchMaxIter").value || "500"));
+  const runs = Math.max(1, parseInt(document.getElementById("batchRuns").value || "10"));
+
+  const manual = document.getElementById("seedManual").checked;
+  const seed = manual
+    ? parseInt(document.getElementById("batchSeed").value || "41")
+    : (crypto && crypto.getRandomValues ? crypto.getRandomValues(new Uint32Array(1))[0] : (Date.now() >>> 0));
+
+  if(!manual){
+    // show the seed used this time (for optional reproducibility)
+    document.getElementById("batchSeed").value = seed;
+  }
+
+  // algorithm params
+  const params = {
+    T0: parseFloat(document.getElementById("T0").value || "50"),
+    alpha: parseFloat(document.getElementById("alpha").value || "0.95"),
+    tabuSize: clamp(parseInt(document.getElementById("tabuSize").value || "5"), 1, maxX+1)
+  };
+  if(!isFinite(params.T0) || params.T0 <= 0) params.T0 = 50;
+  if(!isFinite(params.alpha) || params.alpha <= 0 || params.alpha >= 1) params.alpha = 0.95;
+
+  const rng = makeLCG(seed);
+
+  batchClear();
+  batchAppend(`<b>Batch started</b> | algo=${algo}, bits=${bitLength}, space=[0..${maxX}]<br>` +
+              `maxIter=${maxIter}, runs=${runs}, seed=${seed} ${manual ? "(manual)" : "(auto)"}<br>` +
+              `<span class="mono">f(x)= ${A}x^3 + ${B}x^2 + ${C}x + ${D}</span><hr>`);
+
+  let bestOverall = null;
+  let worstOverall = null;
+  let sum = 0;
+  let sum2 = 0;
+
+  for(let r=1; r<=runs; r++){
+    const initX = rng.nextInt(0, maxX);
+    const out = runSingle(algo, params, maxIter, initX, rng);
+
+    sum += out.bestF;
+    sum2 += out.bestF*out.bestF;
+
+    if(bestOverall === null || out.bestF > bestOverall.bestF) bestOverall = {run:r, bestX: out.bestX, bestF: out.bestF, initX};
+    if(worstOverall === null || out.bestF < worstOverall.bestF) worstOverall = {run:r, bestX: out.bestX, bestF: out.bestF, initX};
+
+    batchAppend(
+      `Run ${r}: init x=${initX} (${bitsOf(initX)}) → ` +
+      `<b>best x=${out.bestX}</b> (${bitsOf(out.bestX)}), <b>f=${out.bestF.toFixed(3)}</b>`
+    );
+  }
+
+  const mean = sum / runs;
+  const varPop = Math.max(0, sum2 / runs - mean*mean);
+  const std = Math.sqrt(varPop);
+
+  batchAppend("<hr>");
+  batchAppend(`<b>Summary</b><br>` +
+    `mean(bestF)=${mean.toFixed(3)}, std=${std.toFixed(3)}<br>` +
+    `best-of-all: run ${bestOverall.run}, x=${bestOverall.bestX} (${bitsOf(bestOverall.bestX)}), f=${bestOverall.bestF.toFixed(3)}<br>` +
+    `worst-of-all: run ${worstOverall.run}, x=${worstOverall.bestX} (${bitsOf(worstOverall.bestX)}), f=${worstOverall.bestF.toFixed(3)}`
+  );
+
+  // reflect best-of-all on main plot (nice UX)
+  current = bestOverall.bestX;
+  best = bestOverall.bestX;
+  drawLandscape();
+}
+
+/* =========================================================
+   Drawing
+========================================================= */
+function drawAll(){
+  drawLandscape();
+  drawConvergence();
+  drawTemperature();
+}
+
+function computeMinMaxFx(){
+  let minVal = Infinity, maxVal = -Infinity;
+  for(let i=0;i<=maxX;i++){
+    const v = f(i);
+    if(v < minVal) minVal = v;
+    if(v > maxVal) maxVal = v;
+  }
+  return {min:minVal, max:maxVal};
+}
+
+function drawAxes(ctx, w, h, pad, xLabel, yLabel){
+  ctx.strokeStyle = "#999";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pad, h-pad);
+  ctx.lineTo(w-pad, h-pad);
+  ctx.moveTo(pad, h-pad);
+  ctx.lineTo(pad, pad);
+  ctx.stroke();
+
+  ctx.fillStyle = "#333";
+  ctx.font = "12px Arial";
+  ctx.fillText(xLabel, w - pad - 70, h - pad + 30);
+
+  ctx.save();
+  ctx.translate(15, pad+10);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText(yLabel, 0, 0);
+  ctx.restore();
+}
+
+function drawStar(ctx, x, y, r, fillStyle){
+  ctx.save();
+  ctx.fillStyle = fillStyle;
+  ctx.beginPath();
+  const spikes = 5;
+  const step = Math.PI / spikes;
+  let rot = -Math.PI/2;
+  ctx.moveTo(x, y - r);
+  for(let i=0;i<spikes;i++){
+    ctx.lineTo(x + Math.cos(rot + step) * (r*0.45), y + Math.sin(rot + step) * (r*0.45));
+    ctx.lineTo(x + Math.cos(rot + 2*step) * r,        y + Math.sin(rot + 2*step) * r);
+    rot += 2*step;
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawLandscape(){
+  const c = document.getElementById("landscape");
+  const ctx = c.getContext("2d");
+  ctx.clearRect(0,0,c.width,c.height);
+
+  const pad = 45, w = c.width, h = c.height;
+  drawAxes(ctx, w, h, pad, `x (0..${maxX})`, "f(x)");
+
+  const {min, max} = computeMinMaxFx();
+
+  // curve
+  ctx.strokeStyle = "#222";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for(let x=0;x<=maxX;x++){
+    const px = pad + (x/maxX)*(w-2*pad);
+    const py = (h-pad) - ((f(x)-min)/(max-min || 1))*(h-2*pad);
+    if(x===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  }
+  ctx.stroke();
+
+  // local maxima markers (only when space is not too large)
+  if(localMaxima.length > 0 && maxX <= 255){
+    ctx.fillStyle = "rgba(30,102,255,0.22)";
+    for(const lx of localMaxima){
+      const px = pad + (lx/maxX)*(w-2*pad);
+      const py = (h-pad) - ((f(lx)-min)/(max-min || 1))*(h-2*pad);
+      ctx.beginPath();
+      ctx.arc(px, py, 3, 0, 2*Math.PI);
+      ctx.fill();
+    }
+  }
+
+  // current point
+  if(current === undefined || current === null) current = 0;
+  const cx = pad + (current/maxX)*(w-2*pad);
+  const cy = (h-pad) - ((f(current)-min)/(max-min || 1))*(h-2*pad);
+  ctx.fillStyle = "red";
+  ctx.beginPath();
+  ctx.arc(cx, cy, 5, 0, 2*Math.PI);
+  ctx.fill();
+
+  // best marker (green) in interactive mode
+  if(best === undefined || best === null) best = current;
+  const bx = pad + (best/maxX)*(w-2*pad);
+  const by = (h-pad) - ((f(best)-min)/(max-min || 1))*(h-2*pad);
+  ctx.fillStyle = "green";
+  ctx.beginPath();
+  ctx.arc(bx, by, 4, 0, 2*Math.PI);
+  ctx.fill();
+
+  // global optimum marker (blue star) if analyzed
+  if(globalOptX !== null){
+    const gx = pad + (globalOptX/maxX)*(w-2*pad);
+    const gy = (h-pad) - ((globalOptF-min)/(max-min || 1))*(h-2*pad);
+    drawStar(ctx, gx, gy, 8, "#1e66ff");
+  }
+
+  // labels
+  ctx.fillStyle = "#111";
+  ctx.font = "12px Arial";
+  ctx.fillText(`f(x)= ${A}x^3 + ${B}x^2 + ${C}x + ${D}`, pad, 16);
+
+  let extra = "";
+  if(globalOptX !== null){
+    extra = ` | global x*=${globalOptX}, f*=${globalOptF.toFixed(3)}`;
+  }
+  ctx.fillText(`current x=${current}, f=${f(current).toFixed(3)} | best x=${best}, best f=${f(best).toFixed(3)}${extra}`, pad, 32);
+
+  if(globalOptX !== null){
+    ctx.fillStyle = "#1e66ff";
+    ctx.fillText("★ global optimum", w - pad - 130, 16);
+  }
+  if(localMaxima.length > 0 && maxX <= 255){
+    ctx.fillStyle = "rgba(30,102,255,0.65)";
+    ctx.fillText("• local maxima", w - pad - 130, 32);
+  }
+}
+
+function drawPolyline(ctx, arr, w, h, pad, yMin, yMax, strokeStyle){
+  ctx.strokeStyle = strokeStyle;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for(let i=0;i<arr.length;i++){
+    const px = pad + (i/(arr.length-1 || 1))*(w-2*pad);
+    const py = (h-pad) - ((arr[i]-yMin)/(yMax-yMin || 1))*(h-2*pad);
+    if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  }
+  ctx.stroke();
+}
+
+function drawConvergence(){
+  const c = document.getElementById("convergence");
+  const ctx = c.getContext("2d");
+  ctx.clearRect(0,0,c.width,c.height);
+
+  const pad = 45, w = c.width, h = c.height;
+  drawAxes(ctx, w, h, pad, "iteration", "fitness");
+
+  if(bestHistory.length < 2){
+    ctx.fillStyle="#111"; ctx.font="12px Arial";
+    ctx.fillText("Run steps to see convergence (current vs best-so-far).", pad, 18);
+    return;
+  }
+
+  const all = currentHistory.concat(bestHistory);
+  const yMax = Math.max(...all);
+  const yMin = Math.min(...all);
+
+  drawPolyline(ctx, currentHistory, w, h, pad, yMin, yMax, "#9a9a9a");
+  drawPolyline(ctx, bestHistory,   w, h, pad, yMin, yMax, "green");
+
+  ctx.fillStyle="#111"; ctx.font="12px Arial";
+  ctx.fillText("Convergence: current (gray) vs best-so-far (green)", pad, 18);
+}
+
+function drawTemperature(){
+  const c = document.getElementById("temperature");
+  const ctx = c.getContext("2d");
+  ctx.clearRect(0,0,c.width,c.height);
+
+  const pad = 45, w = c.width, h = c.height;
+  drawAxes(ctx, w, h, pad, "iteration", "T");
+
+  const temps = tempHistory.filter(v => Number.isFinite(v));
+  if(temps.length < 2){
+    ctx.fillStyle="#111"; ctx.font="12px Arial";
+    ctx.fillText("Temperature curve appears when running SA.", pad, 18);
+    return;
+  }
+
+  const tMin = Math.min(...temps);
+  const tMax = Math.max(...temps);
+
+  ctx.strokeStyle="#1e66ff";
+  ctx.lineWidth=2;
+  ctx.beginPath();
+
+  let first=true;
+  for(let i=0;i<tempHistory.length;i++){
+    const t = tempHistory[i];
+    if(!Number.isFinite(t)) continue;
+    const px = pad + (i/(tempHistory.length-1 || 1))*(w-2*pad);
+    const py = (h-pad) - ((t-tMin)/(tMax-tMin || 1))*(h-2*pad);
+    if(first){ ctx.moveTo(px,py); first=false; }
+    else ctx.lineTo(px,py);
+  }
+  ctx.stroke();
+
+  ctx.fillStyle="#1e66ff"; ctx.font="12px Arial";
+  if(T !== undefined && T !== null){
+    ctx.fillText(`current T = ${T.toFixed(4)}`, w - pad - 140, 18);
+  }
+}
+
+/* =========================================================
+   Start
+========================================================= */
+updateBitSettings();
+applyObjectiveSilently();
+setAnalysisBox("(按下 Analyze Landscape 後顯示)");
+toggleSeedManual(); // NEW: initialize seed UI state
+init();
+batchClear();
+batchAppend("Batch results will appear here.");
+</script>
+
+</body>
+</html>
