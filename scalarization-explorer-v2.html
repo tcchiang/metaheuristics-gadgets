@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scalarization Explorer V2</title>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --line: #d7deea;
+      --text: #1f2937;
+      --muted: #667085;
+      --accent: #2563eb;
+      --accent2: #0f766e;
+      --warn: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Segoe UI", "Noto Sans TC", Arial, sans-serif; background: var(--bg); color: var(--text); }
+    .app { display: grid; grid-template-columns: 370px 1fr; min-height: 100vh; }
+    .sidebar {
+      background: var(--panel); border-right: 1px solid var(--line); padding: 18px 18px 28px; overflow-y: auto;
+    }
+    .main { padding: 16px; }
+    h1 { font-size: 1.35rem; margin: 0 0 8px; }
+    h2 { font-size: 1rem; margin: 18px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+    .desc, .note { color: var(--muted); line-height: 1.6; font-size: 0.92rem; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .field { margin-bottom: 10px; }
+    .field label { display: block; font-size: 0.86rem; margin-bottom: 4px; color: #344054; }
+    .field input, .field select {
+      width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 9px; background: #fff; font-size: 0.95rem;
+    }
+    .check-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+    .check-row label { display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    button {
+      border: 0; border-radius: 10px; padding: 9px 14px; cursor: pointer; font-size: 0.95rem;
+    }
+    .primary { background: var(--accent); color: #fff; }
+    .secondary { background: #e5e7eb; color: #111827; }
+    .pill {
+      background: #eef2ff; color: #3730a3; border-radius: 999px; padding: 4px 9px; display: inline-block; font-size: 0.8rem; margin-top: 6px;
+    }
+    .warning {
+      margin-top: 10px; color: var(--warn); background: #fef2f2; border: 1px solid #fecaca;
+      padding: 10px 12px; border-radius: 10px; display: none; font-size: 0.9rem; line-height: 1.45;
+    }
+    .box {
+      background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px 12px; margin-top: 10px; font-size: 0.88rem; line-height: 1.58;
+    }
+    .topbar { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 12px; }
+    .legend-note { color: var(--muted); font-size: 0.9rem; }
+    .plots { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .plot-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+    .plot-title { font-size: 1rem; font-weight: 700; margin: 2px 4px 4px; }
+    .plot-subtitle { color: var(--muted); font-size: 0.83rem; margin: 0 4px 6px; }
+    .plot { width: 100%; height: 400px; }
+    .compare-table {
+      width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-top: 10px; background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+    }
+    .compare-table th, .compare-table td { border-bottom: 1px solid #eef2f7; padding: 8px 10px; text-align: left; }
+    .compare-table th { background: #f8fafc; }
+    .footer-note { color: var(--muted); font-size: 0.84rem; margin-top: 10px; line-height: 1.55; }
+    @media (max-width: 1180px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { border-right: 0; border-bottom: 1px solid var(--line); }
+      .plots { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <h1>Scalarization Explorer V2</h1>
+
+      <h2>PF 形狀與展示</h2>
+      <div class="grid2">
+        <div class="field">
+          <label for="pfType">PF 類型</label>
+          <select id="pfType">
+            <option value="linear">Linear PF</option>
+            <option value="convex">Convex PF</option>
+            <option value="concave" selected>Concave PF</option>
+            <option value="disconnected">Disconnected PF</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="pfSamples">PF 取樣點數</label>
+          <select id="pfSamples">
+            <option value="101">101</option>
+            <option value="201" selected>201</option>
+            <option value="401">401</option>
+          </select>
+        </div>
+      </div>
+      <div class="check-row">
+        <label><input id="showPF" type="checkbox" checked /> 顯示 PF</label>
+        <label><input id="showSelectedPoint" type="checkbox" checked /> 顯示各法選中點</label>
+        <label><input id="showWeightRay" type="checkbox" checked /> 顯示 weight ray</label>
+        <label><input id="showGuideLine" type="checkbox" checked /> 顯示 reference 輔助線</label>
+      </div>
+
+      <h2>Reference point 與 weight</h2>
+      <div class="grid2">
+        <div class="field"><label for="z1">z1</label><input id="z1" type="number" step="0.01" value="0" /></div>
+        <div class="field"><label for="z2">z2</label><input id="z2" type="number" step="0.01" value="0" /></div>
+        <div class="field"><label for="w1">w1</label><input id="w1" type="number" step="0.01" value="0.3" /></div>
+        <div class="field"><label for="w2">w2</label><input id="w2" type="number" step="0.01" value="0.7" /></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label for="w1Slider">w1 滑桿</label><input id="w1Slider" type="range" min="0.05" max="0.95" step="0.01" value="0.30" /></div>
+        <div class="field"><label for="w2Slider">w2 滑桿</label><input id="w2Slider" type="range" min="0.05" max="0.95" step="0.01" value="0.70" /></div>
+      </div>
+
+      <h2>方法參數</h2>
+      <div class="grid2">
+        <div class="field"><label for="c">c (Modified TCH)</label><input id="c" type="number" step="0.001" value="0.02" /></div>
+        <div class="field"><label for="theta">theta (PBI)</label><input id="theta" type="number" step="0.1" value="5.0" /></div>
+      </div>
+
+      <h2>目標空間範圍</h2>
+      <div class="grid2">
+        <div class="field"><label for="f1min">f1 min</label><input id="f1min" type="number" step="0.1" value="0" /></div>
+        <div class="field"><label for="f1max">f1 max</label><input id="f1max" type="number" step="0.1" value="1.4" /></div>
+        <div class="field"><label for="f2min">f2 min</label><input id="f2min" type="number" step="0.1" value="0" /></div>
+        <div class="field"><label for="f2max">f2 max</label><input id="f2max" type="number" step="0.1" value="1.4" /></div>
+      </div>
+
+      <h2>等高線設定</h2>
+      <div class="grid3">
+        <div class="field">
+          <label for="resolution">網格解析度</label>
+          <select id="resolution">
+            <option value="101">101</option>
+            <option value="201" selected>201</option>
+            <option value="301">301</option>
+            <option value="401">401</option>
+          </select>
+        </div>
+        <div class="field"><label for="nlevels">線條數</label><input id="nlevels" type="number" min="3" step="1" value="12" /></div>
+        <div class="field"><label for="contourMode">levels 模式</label>
+          <select id="contourMode">
+            <option value="auto" selected>自動</option>
+            <option value="common">共用 min/max</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label for="lmin">common level min</label><input id="lmin" type="number" step="0.01" value="0.05" /></div>
+        <div class="field"><label for="lmax">common level max</label><input id="lmax" type="number" step="0.01" value="2.0" /></div>
+      </div>
+      <div class="check-row">
+        <label><input id="showLabels" type="checkbox" checked /> 顯示 contour labels</label>
+      </div>
+
+      <div class="actions">
+        <button class="primary" id="updateBtn">更新圖形</button>
+        <button class="secondary" id="resetBtn">重設預設值</button>
+      </div>
+
+      <div id="warning" class="warning"></div>
+
+      <div class="box">
+        <strong>觀察重點</strong><br>
+        1. 同一個 PF 上，不同 scalarization 可能選到不同代表點。<br>
+        2. 改變 PF 形狀後，WS/TCH/PBI 的偏好差異會更明顯。<br>
+      </div>
+
+      <div class="box">
+        <strong>函數摘要</strong><br>
+        WS: <code>g = w₁|f₁-z₁| + w₂|f₂-z₂|</code><br>
+        TCH: <code>g = max(|f₁-z₁|/w₁, |f₂-z₂|/w₂)</code><br>
+        Modified TCH: 先做 coupled mixing，再取 max 分量<br>
+        PBI: <code>g = d₁ + θd₂</code>，其中 <code>d₁</code> 是沿著權重方向投影長度，<code>d₂</code> 是垂直偏差
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="legend-note">每張圖都會疊加 PF、reference point、weight ray，以及該方法在 PF 上的最佳代表點。你也可以用滑鼠縮放與平移。</div>
+      </div>
+
+      <div class="plots">
+        <div class="plot-card">
+          <div class="plot-title">Weighted Sum</div>
+          <div class="plot-subtitle">線性加權，常用來對照其它 scalarization。</div>
+          <div id="plot-ws" class="plot"></div>
+        </div>
+        <div class="plot-card">
+          <div class="plot-title">TCH</div>
+          <div class="plot-subtitle">max-based 等值線，常呈現折角幾何。</div>
+          <div id="plot-tch" class="plot"></div>
+        </div>
+        <div class="plot-card">
+          <div class="plot-title">Modified TCH</div>
+          <div class="plot-subtitle">在 TCH 上加入 coupled mixing。</div>
+          <div id="plot-mod" class="plot"></div>
+        </div>
+        <div class="plot-card">
+          <div class="plot-title">PBI</div>
+          <div class="plot-subtitle">沿 weight 投影前進，並懲罰偏離方向。</div>
+          <div id="plot-pbi" class="plot"></div>
+        </div>
+      </div>
+
+      <table class="compare-table" id="compareTable">
+        <thead>
+          <tr>
+            <th>方法</th>
+            <th>PF 選中點</th>
+            <th>scalar value</th>
+            <th>教學觀察</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </main>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const plotIds = {
+      ws: 'plot-ws',
+      tch: 'plot-tch',
+      mod: 'plot-mod',
+      pbi: 'plot-pbi'
+    };
+
+    const defaults = {
+      pfType: 'concave', pfSamples: 201,
+      z1: 0, z2: 0, w1: 0.3, w2: 0.7,
+      c: 0.02, theta: 5.0,
+      f1min: 0, f1max: 1.4, f2min: 0, f2max: 1.4,
+      resolution: 201, nlevels: 12, contourMode: 'auto', lmin: 0.05, lmax: 2.0,
+      showPF: true, showSelectedPoint: true, showWeightRay: true, showGuideLine: true, showLabels: true
+    };
+
+    function linspace(a, b, n) {
+      if (n <= 1) return [a];
+      const arr = [];
+      const step = (b - a) / (n - 1);
+      for (let i = 0; i < n; i++) arr.push(a + i * step);
+      return arr;
+    }
+
+    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+    function normalizeWeightPair() {
+      let w1 = parseFloat($('w1').value);
+      let w2 = parseFloat($('w2').value);
+      if (!(w1 > 0) || !(w2 > 0)) return;
+      const s = w1 + w2;
+      $('w1').value = (w1 / s).toFixed(2);
+      $('w2').value = (w2 / s).toFixed(2);
+      $('w1Slider').value = parseFloat($('w1').value);
+      $('w2Slider').value = parseFloat($('w2').value);
+    }
+
+    function scalarWS(f1, f2, z, w) {
+      return w[0] * Math.abs(f1 - z[0]) + w[1] * Math.abs(f2 - z[1]);
+    }
+
+    function scalarTCH(f1, f2, z, w, eps = 1e-12) {
+      const w0 = Math.max(w[0], eps), w1 = Math.max(w[1], eps);
+      return Math.max(Math.abs(f1 - z[0]) / w0, Math.abs(f2 - z[1]) / w1);
+    }
+
+    function scalarModTCH(f1, f2, z, w, c, eps = 1e-12) {
+      const w0 = Math.max(w[0], eps), w1 = Math.max(w[1], eps);
+      const A00 = 1, A01 = c, A10 = c, A11 = 1;
+      const d0 = f1 - z[0], d1 = f2 - z[1];
+      const wA0 = w0 * A00 + w1 * A10;
+      const wA1 = w0 * A01 + w1 * A11;
+      const scale0 = Math.max(wA0 / w0, eps);
+      const scale1 = Math.max(wA1 / w1, eps);
+      const dm0 = d0 * A00 + d1 * A10;
+      const dm1 = d0 * A01 + d1 * A11;
+      const da0 = Math.abs(dm0 / scale0);
+      const da1 = Math.abs(dm1 / scale1);
+      return Math.max(da0 / w0, da1 / w1);
+    }
+
+    function scalarPBI(f1, f2, z, w, theta, eps = 1e-12) {
+      const norm = Math.hypot(w[0], w[1]) + eps;
+      const wn0 = w[0] / norm, wn1 = w[1] / norm;
+      const d0 = f1 - z[0], d1 = f2 - z[1];
+      const proj = d0 * wn0 + d1 * wn1;
+      const px = d0 - proj * wn0;
+      const py = d1 - proj * wn1;
+      const perp = Math.hypot(px, py);
+      return proj + theta * perp;
+    }
+
+    function buildPF(pfType, n) {
+      const xs = [];
+      const ys = [];
+      const t = linspace(0, 1, n);
+      if (pfType === 'linear') {
+        for (const u of t) {
+          xs.push(u); ys.push(1 - u);
+        }
+      } else if (pfType === 'convex') {
+        for (const u of t) {
+          xs.push(u); ys.push(1 - Math.sqrt(u));
+        }
+      } else if (pfType === 'concave') {
+        for (const u of t) {
+          xs.push(u); ys.push(1 - u * u);
+        }
+      } else if (pfType === 'disconnected') {
+        for (const u of t) {
+          if ((u >= 0.00 && u <= 0.28) || (u >= 0.45 && u <= 0.70) || (u >= 0.82 && u <= 1.00)) {
+            xs.push(u);
+            ys.push(1 - Math.sqrt(u));
+          } else {
+            xs.push(NaN);
+            ys.push(NaN);
+          }
+        }
+      }
+      return { xs, ys };
+    }
+
+    function buildPFContinuousPoints(pfType, n) {
+      const pts = [];
+      const t = linspace(0, 1, n);
+      if (pfType === 'linear') {
+        for (const u of t) pts.push([u, 1 - u]);
+      } else if (pfType === 'convex') {
+        for (const u of t) pts.push([u, 1 - Math.sqrt(u)]);
+      } else if (pfType === 'concave') {
+        for (const u of t) pts.push([u, 1 - u * u]);
+      } else if (pfType === 'disconnected') {
+        for (const u of t) {
+          if ((u >= 0.00 && u <= 0.28) || (u >= 0.45 && u <= 0.70) || (u >= 0.82 && u <= 1.00)) {
+            pts.push([u, 1 - Math.sqrt(u)]);
+          }
+        }
+      }
+      return pts;
+    }
+
+    function argminOnPF(points, method, params) {
+      let best = null;
+      let bestVal = Infinity;
+      for (const [x, y] of points) {
+        let val;
+        if (method === 'ws') val = scalarWS(x, y, params.z, params.w);
+        else if (method === 'tch') val = scalarTCH(x, y, params.z, params.w);
+        else if (method === 'mod') val = scalarModTCH(x, y, params.z, params.w, params.c);
+        else val = scalarPBI(x, y, params.z, params.w, params.theta);
+        if (val < bestVal) {
+          bestVal = val;
+          best = { x, y, val };
+        }
+      }
+      return best;
+    }
+
+    function buildGridData(params, scalarFn) {
+      const x = linspace(params.f1min, params.f1max, params.resolution);
+      const y = linspace(params.f2min, params.f2max, params.resolution);
+      const zvals = [];
+      let minv = Infinity, maxv = -Infinity;
+      for (let j = 0; j < y.length; j++) {
+        const row = [];
+        for (let i = 0; i < x.length; i++) {
+          const v = scalarFn(x[i], y[j]);
+          row.push(v);
+          if (Number.isFinite(v)) {
+            if (v < minv) minv = v;
+            if (v > maxv) maxv = v;
+          }
+        }
+        zvals.push(row);
+      }
+      return { x, y, zvals, minv, maxv };
+    }
+
+    function contourTrace(grid, title, nlevels, labels, contourMode, lmin, lmax) {
+      const trace = {
+        type: 'contour', x: grid.x, y: grid.y, z: grid.zvals,
+        colorscale: 'Blues', showscale: false,
+        contours: { coloring: 'lines', showlabels: labels, labelfont: { size: 11, color: '#1f2937' } },
+        line: { width: 1.2 }, hovertemplate: 'f1=%{x:.3f}<br>f2=%{y:.3f}<br>g=%{z:.4f}<extra></extra>',
+        name: title
+      };
+      if (contourMode === 'common') {
+        trace.autocontour = false;
+        trace.contours.start = lmin;
+        trace.contours.end = lmax;
+        trace.contours.size = (lmax - lmin) / Math.max(nlevels - 1, 1);
+      } else {
+        trace.autocontour = false;
+        const start = grid.minv + 0.05 * (grid.maxv - grid.minv || 1);
+        const end = grid.minv + 0.85 * (grid.maxv - grid.minv || 1);
+        trace.contours.start = start;
+        trace.contours.end = end;
+        trace.contours.size = (end - start) / Math.max(nlevels - 1, 1);
+      }
+      return trace;
+    }
+
+    function overlayTraces(params, pfCurve, chosen, methodLabel) {
+      const traces = [];
+      if (params.showPF) {
+        traces.push({
+          type: 'scatter', mode: 'lines', x: pfCurve.xs, y: pfCurve.ys,
+          line: { width: 3, color: '#111827' }, name: 'PF',
+          hovertemplate: 'PF<br>f1=%{x:.3f}<br>f2=%{y:.3f}<extra></extra>'
+        });
+      }
+      traces.push({
+        type: 'scatter', mode: 'markers', x: [params.z[0]], y: [params.z[1]],
+        marker: { size: 10, color: '#dc2626', symbol: 'circle' }, name: 'reference point',
+        hovertemplate: 'reference z<br>z1=%{x:.3f}<br>z2=%{y:.3f}<extra></extra>'
+      });
+      if (params.showWeightRay) {
+        const norm = Math.hypot(params.w[0], params.w[1]) || 1;
+        const wn0 = params.w[0] / norm, wn1 = params.w[1] / norm;
+        const span = 0.75 * Math.min(params.f1max - params.f1min, params.f2max - params.f2min);
+        traces.push({
+          type: 'scatter', mode: 'lines+markers',
+          x: [params.z[0], params.z[0] + span * wn0],
+          y: [params.z[1], params.z[1] + span * wn1],
+          line: { width: 3, color: '#0f766e', dash: 'dash' },
+          marker: { size: [0, 7], color: '#0f766e' }, name: 'weight ray',
+          hovertemplate: 'weight ray<extra></extra>'
+        });
+      }
+      if (params.showGuideLine) {
+        traces.push({
+          type: 'scatter', mode: 'lines', x: [params.z[0], params.f1max], y: [params.z[1], params.z[1]],
+          line: { width: 1, color: '#9ca3af', dash: 'dot' }, name: 'z-guide-x', hoverinfo: 'skip', showlegend: false
+        });
+        traces.push({
+          type: 'scatter', mode: 'lines', x: [params.z[0], params.z[0]], y: [params.z[1], params.f2max],
+          line: { width: 1, color: '#9ca3af', dash: 'dot' }, name: 'z-guide-y', hoverinfo: 'skip', showlegend: false
+        });
+      }
+      if (params.showSelectedPoint && chosen) {
+        traces.push({
+          type: 'scatter', mode: 'markers+text', x: [chosen.x], y: [chosen.y], text: [methodLabel], textposition: 'top center',
+          marker: { size: 11, color: '#f59e0b', line: { color: '#92400e', width: 1.5 } },
+          name: `${methodLabel} selected`,
+          hovertemplate: `${methodLabel}<br>f1=%{x:.3f}<br>f2=%{y:.3f}<extra></extra>`
+        });
+      }
+      return traces;
+    }
+
+    function renderSinglePlot(divId, title, grid, params, pfCurve, chosen, methodLabel) {
+      const traces = [
+        contourTrace(grid, title, params.nlevels, params.showLabels, params.contourMode, params.lmin, params.lmax),
+        ...overlayTraces(params, pfCurve, chosen, methodLabel)
+      ];
+      const layout = {
+        margin: { l: 52, r: 15, t: 12, b: 45 },
+        paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff',
+        xaxis: { title: 'f1', range: [params.f1min, params.f1max], zeroline: false, scaleanchor: 'y', scaleratio: 1, gridcolor: '#eef2f7' },
+        yaxis: { title: 'f2', range: [params.f2min, params.f2max], zeroline: false, gridcolor: '#eef2f7' },
+        legend: { orientation: 'h', y: -0.16, x: 0 },
+        showlegend: true
+      };
+      Plotly.react(divId, traces, layout, { responsive: true, displaylogo: false, toImageButtonOptions: { format: 'png', filename: `${divId}` } });
+    }
+
+    function readParams() {
+      return {
+        pfType: $('pfType').value,
+        pfSamples: parseInt($('pfSamples').value, 10),
+        z: [parseFloat($('z1').value), parseFloat($('z2').value)],
+        w: [parseFloat($('w1').value), parseFloat($('w2').value)],
+        c: parseFloat($('c').value),
+        theta: parseFloat($('theta').value),
+        f1min: parseFloat($('f1min').value), f1max: parseFloat($('f1max').value),
+        f2min: parseFloat($('f2min').value), f2max: parseFloat($('f2max').value),
+        resolution: parseInt($('resolution').value, 10),
+        nlevels: parseInt($('nlevels').value, 10),
+        contourMode: $('contourMode').value,
+        lmin: parseFloat($('lmin').value), lmax: parseFloat($('lmax').value),
+        showPF: $('showPF').checked,
+        showSelectedPoint: $('showSelectedPoint').checked,
+        showWeightRay: $('showWeightRay').checked,
+        showGuideLine: $('showGuideLine').checked,
+        showLabels: $('showLabels').checked
+      };
+    }
+
+    function showWarning(msg) {
+      const w = $('warning');
+      if (!msg) {
+        w.style.display = 'none';
+        w.textContent = '';
+      } else {
+        w.style.display = 'block';
+        w.textContent = msg;
+      }
+    }
+
+    function updateSummaryTable(results) {
+      const tbody = $('compareTable').querySelector('tbody');
+      tbody.innerHTML = '';
+      const observations = {
+        ws: '較偏線性權衡；在某些 PF 形狀下，代表點偏好可能集中。',
+        tch: '偏向平衡最大歸一化偏差，幾何上常呈折角式等值線。',
+        mod: '比 TCH 多了 coupled mixing，等值線方向感會略有調整。',
+        pbi: '強調沿權重方向前進，並懲罰偏離權重 ray 的點。'
+      };
+      const names = { ws: 'Weighted Sum', tch: 'TCH', mod: 'Modified TCH', pbi: 'PBI' };
+      for (const key of ['ws','tch','mod','pbi']) {
+        const item = results[key];
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${names[key]}</td>
+          <td>(${item.x.toFixed(3)}, ${item.y.toFixed(3)})</td>
+          <td>${item.val.toFixed(4)}</td>
+          <td>${observations[key]}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+
+    function updateAll() {
+      const p = readParams();
+      if (!(p.w[0] > 0 && p.w[1] > 0)) {
+        showWarning('w1、w2 必須都大於 0，因為 TCH / Modified TCH 需要用到除以 w。');
+        return;
+      }
+      if (!(p.f1max > p.f1min && p.f2max > p.f2min)) {
+        showWarning('f1/f2 的 max 必須大於 min。');
+        return;
+      }
+      if (!(p.nlevels >= 3)) {
+        showWarning('等高線數量至少要 3。');
+        return;
+      }
+      showWarning('');
+
+      const pfCurve = buildPF(p.pfType, p.pfSamples);
+      const pfPoints = buildPFContinuousPoints(p.pfType, p.pfSamples);
+
+      const grids = {
+        ws: buildGridData(p, (x, y) => scalarWS(x, y, p.z, p.w)),
+        tch: buildGridData(p, (x, y) => scalarTCH(x, y, p.z, p.w)),
+        mod: buildGridData(p, (x, y) => scalarModTCH(x, y, p.z, p.w, p.c)),
+        pbi: buildGridData(p, (x, y) => scalarPBI(x, y, p.z, p.w, p.theta))
+      };
+
+      const chosen = {
+        ws: argminOnPF(pfPoints, 'ws', p),
+        tch: argminOnPF(pfPoints, 'tch', p),
+        mod: argminOnPF(pfPoints, 'mod', p),
+        pbi: argminOnPF(pfPoints, 'pbi', p)
+      };
+
+      renderSinglePlot(plotIds.ws, 'Weighted Sum', grids.ws, p, pfCurve, chosen.ws, 'WS');
+      renderSinglePlot(plotIds.tch, 'TCH', grids.tch, p, pfCurve, chosen.tch, 'TCH');
+      renderSinglePlot(plotIds.mod, 'Modified TCH', grids.mod, p, pfCurve, chosen.mod, 'Mod');
+      renderSinglePlot(plotIds.pbi, 'PBI', grids.pbi, p, pfCurve, chosen.pbi, 'PBI');
+
+      updateSummaryTable(chosen);
+    }
+
+    function resetDefaults() {
+      $('pfType').value = defaults.pfType;
+      $('pfSamples').value = String(defaults.pfSamples);
+      $('z1').value = defaults.z1; $('z2').value = defaults.z2;
+      $('w1').value = defaults.w1; $('w2').value = defaults.w2;
+      $('w1Slider').value = defaults.w1; $('w2Slider').value = defaults.w2;
+      $('c').value = defaults.c; $('theta').value = defaults.theta;
+      $('f1min').value = defaults.f1min; $('f1max').value = defaults.f1max;
+      $('f2min').value = defaults.f2min; $('f2max').value = defaults.f2max;
+      $('resolution').value = String(defaults.resolution);
+      $('nlevels').value = defaults.nlevels;
+      $('contourMode').value = defaults.contourMode;
+      $('lmin').value = defaults.lmin; $('lmax').value = defaults.lmax;
+      $('showPF').checked = defaults.showPF;
+      $('showSelectedPoint').checked = defaults.showSelectedPoint;
+      $('showWeightRay').checked = defaults.showWeightRay;
+      $('showGuideLine').checked = defaults.showGuideLine;
+      $('showLabels').checked = defaults.showLabels;
+      updateAll();
+    }
+
+    function bindEvents() {
+      $('updateBtn').addEventListener('click', updateAll);
+      $('resetBtn').addEventListener('click', resetDefaults);
+      document.querySelectorAll('input, select').forEach(el => {
+        if (el.type === 'checkbox' || el.tagName === 'SELECT') {
+          el.addEventListener('change', updateAll);
+        } else if (el.type !== 'range') {
+          el.addEventListener('change', updateAll);
+        }
+      });
+      $('w1Slider').addEventListener('input', (e) => {
+        const w1 = parseFloat(e.target.value);
+        const w2 = 1 - w1;
+        $('w1').value = w1.toFixed(2);
+        $('w2').value = w2.toFixed(2);
+        $('w2Slider').value = w2.toFixed(2);
+        updateAll();
+      });
+      $('w2Slider').addEventListener('input', (e) => {
+        const w2 = parseFloat(e.target.value);
+        const w1 = 1 - w2;
+        $('w2').value = w2.toFixed(2);
+        $('w1').value = w1.toFixed(2);
+        $('w1Slider').value = w1.toFixed(2);
+        updateAll();
+      });
+      $('w1').addEventListener('change', normalizeWeightPair);
+      $('w2').addEventListener('change', normalizeWeightPair);
+    }
+
+    bindEvents();
+    updateAll();
+  </script>
+</body>
+</html>
