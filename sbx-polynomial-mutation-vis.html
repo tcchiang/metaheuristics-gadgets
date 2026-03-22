@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SBX 與 Polynomial Mutation 互動教學實驗室</title>
+<style>
+  :root{
+    --bg:#f7f9fc;
+    --panel:#ffffff;
+    --ink:#1f2937;
+    --muted:#6b7280;
+    --line:#d7dee8;
+    --accent:#2563eb;
+    --accent2:#7c3aed;
+    --accent3:#ea580c;
+    --ok:#059669;
+    --soft:#eef4ff;
+    --soft2:#f5f0ff;
+    --soft3:#fff4ec;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family: "Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    line-height:1.55;
+  }
+  header{
+    background:linear-gradient(180deg,#fdfefe 0%, #f4f7fb 100%);
+    border-bottom:1px solid var(--line);
+    padding:28px 18px 20px;
+  }
+  .wrap{max-width:1280px;margin:0 auto}
+  h1{margin:0 0 8px;font-size:30px}
+  .subtitle{color:var(--muted);font-size:15px}
+  .hero-notes{
+    margin-top:16px; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px;
+  }
+  .note{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px 14px;
+    box-shadow:0 2px 10px rgba(25,35,55,.04);
+  }
+  .note b{display:block;margin-bottom:4px}
+  main{padding:18px}
+  section{
+    margin:18px auto;
+    max-width:1280px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:18px;
+    box-shadow:0 4px 18px rgba(25,35,55,.05);
+    overflow:hidden;
+  }
+  .section-head{
+    padding:16px 18px;
+    border-bottom:1px solid var(--line);
+    background:#fbfcfe;
+  }
+  .section-head h2{margin:0 0 4px;font-size:23px}
+  .section-head p{margin:0;color:var(--muted)}
+  .grid{
+    display:grid;
+    grid-template-columns:340px 1fr;
+    gap:0;
+  }
+  .controls{
+    border-right:1px solid var(--line);
+    padding:16px;
+    background:#fcfdff;
+  }
+  .viz{
+    padding:16px;
+  }
+  .control-group{
+    margin-bottom:16px;
+    padding-bottom:14px;
+    border-bottom:1px dashed var(--line);
+  }
+  .control-group:last-child{border-bottom:none}
+  .control-group h3{
+    font-size:15px; margin:0 0 10px; color:#111827;
+  }
+  label{
+    display:block; margin:8px 0 4px; font-size:13px; color:#374151;
+  }
+  .label-row{
+    display:flex; justify-content:space-between; gap:8px; align-items:baseline;
+  }
+  .val{
+    color:var(--accent); font-weight:700; font-size:13px;
+  }
+  input[type="range"]{width:100%}
+  input[type="number"], select{
+    width:100%; padding:8px 10px; border-radius:10px; border:1px solid #cfd8e3; background:#fff; color:var(--ink);
+    font-size:14px;
+  }
+  .row2{
+    display:grid; grid-template-columns:1fr 1fr; gap:10px;
+  }
+  .btns{
+    display:flex; flex-wrap:wrap; gap:8px;
+  }
+  button{
+    border:none; border-radius:12px; padding:9px 12px; cursor:pointer;
+    background:#e9efff; color:#1e40af; font-weight:700;
+  }
+  button.secondary{background:#f3f4f6;color:#374151}
+  button.orange{background:#fff0e8;color:#c2410c}
+  button.purple{background:#f1ebff;color:#6d28d9}
+  button.green{background:#eafbf4;color:#047857}
+  .small{font-size:12px;color:var(--muted)}
+  .panel-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:14px;
+  }
+  .viz-card{
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:12px;
+    background:#fff;
+  }
+  .viz-card h3{margin:0 0 8px;font-size:16px}
+  canvas, svg{
+    width:100%; display:block; background:#fff;
+    border:1px solid #edf1f6; border-radius:12px;
+  }
+  .insight{
+    margin-top:10px; padding:10px 12px; border-radius:12px; background:#f8fbff; border:1px solid #e3edf8;
+    font-size:14px;
+  }
+  .formula{
+    margin-top:10px; padding:10px 12px; background:#fafafa; border:1px solid var(--line); border-radius:12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; white-space:pre-wrap;
+  }
+  .table-like{
+    margin-top:10px; border:1px solid var(--line); border-radius:12px; overflow:hidden;
+  }
+  .table-like .tr{
+    display:grid; grid-template-columns:180px 1fr;
+    border-top:1px solid var(--line);
+  }
+  .table-like .tr:first-child{border-top:none}
+  .table-like .th, .table-like .td{padding:8px 10px; font-size:13px}
+  .table-like .th{background:#fafcff; font-weight:700}
+  .compare-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:16px;
+  }
+  .compare-card{
+    border:1px solid var(--line); border-radius:16px; padding:14px; background:#fff;
+  }
+  .badge{
+    display:inline-block; padding:3px 8px; border-radius:999px; font-size:12px; font-weight:700;
+    background:#edf2ff; color:#1d4ed8;
+  }
+  .takeaways{
+    padding:16px 18px;
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px;
+  }
+  .tk{
+    border:1px solid var(--line); border-radius:14px; padding:12px; background:#fff;
+  }
+  .footer-note{padding:0 18px 18px;color:var(--muted);font-size:13px}
+  @media (max-width: 980px){
+    .grid{grid-template-columns:1fr}
+    .controls{border-right:none;border-bottom:1px solid var(--line)}
+    .panel-grid,.compare-grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>SBX 與 Polynomial Mutation 互動教學實驗室</h1>
+    <div class="subtitle">Interactive Lab for Simulated Binary Crossover and Polynomial Mutation</div>
+    <div class="hero-notes">
+      <div class="note"><b>SBX / 模擬二元交配</b>觀察兩個 parent 如何在一維 decision space 中產生 offspring 分布。</div>
+      <div class="note"><b>Polynomial Mutation / 多項式突變</b>觀察單一解在邊界內如何被擾動，以及 η 對分布的影響。</div>
+      <div class="note"><b>Distribution Index η</b>η 小通常較敢跳、探索較強；η 大通常較保守、偏向局部搜尋。</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section>
+    <div class="section-head">
+      <h2>一、SBX 實驗區 <span class="small">SBX Laboratory</span></h2>
+      <p>先用 1D decision space 看懂 SBX 的本質：它是對每一個 decision variable 個別進行的 real-coded crossover。</p>
+    </div>
+    <div class="grid">
+      <div class="controls">
+        <div class="control-group">
+          <h3>基本參數 / Basic Parameters</h3>
+          <div class="label-row"><label for="p1">Parent 1</label><span class="val" id="p1v"></span></div>
+          <input id="p1" type="range" min="0" max="1" step="0.001" value="0.25">
+          <div class="label-row"><label for="p2">Parent 2</label><span class="val" id="p2v"></span></div>
+          <input id="p2" type="range" min="0" max="1" step="0.001" value="0.75">
+          <div class="row2">
+            <div>
+              <label for="lb1">Lower Bound</label>
+              <input id="lb1" type="number" step="0.1" value="0">
+            </div>
+            <div>
+              <label for="ub1">Upper Bound</label>
+              <input id="ub1" type="number" step="0.1" value="1">
+            </div>
+          </div>
+          <div class="label-row"><label for="etaC">η<sub>c</sub> / distribution index</label><span class="val" id="etaCv"></span></div>
+          <input id="etaC" type="range" min="1" max="80" step="1" value="15">
+          <div class="label-row"><label for="pc">Crossover Probability</label><span class="val" id="pcv"></span></div>
+          <input id="pc" type="range" min="0" max="1" step="0.01" value="1">
+          <label for="sbxN">樣本數 / Sample Size</label>
+          <select id="sbxN">
+            <option value="1">1（單次示範）</option>
+            <option value="50">50</option>
+            <option value="200" selected>200</option>
+            <option value="1000">1000</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <h3>預設情境 / Presets</h3>
+          <div class="btns">
+            <button id="sbxClose">父代很近 / Parents close</button>
+            <button id="sbxFar">父代很遠 / Parents far</button>
+            <button id="sbxMid">中距離 / Mid distance</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <h3>操作 / Actions</h3>
+          <div class="btns">
+            <button id="runSBX">重新抽樣 / Resample</button>
+            <button class="secondary" id="toggleSBXFormula">顯示/隱藏公式</button>
+          </div>
+          <div class="small" style="margin-top:8px;">當樣本數為 1 時，下方將顯示單次抽樣細節。</div>
+        </div>
+      </div>
+
+      <div class="viz">
+        <div class="panel-grid">
+          <div class="viz-card">
+            <h3>1D 分布圖 / 1D Visualization</h3>
+            <canvas id="sbxLine" width="720" height="240"></canvas>
+            <div class="insight" id="sbxInsight"></div>
+            <div class="formula" id="sbxFormula" style="display:none"></div>
+          </div>
+          <div class="viz-card">
+            <h3>直方圖 / Histogram</h3>
+            <canvas id="sbxHist" width="720" height="240"></canvas>
+            <div class="table-like">
+              <div class="tr"><div class="th">教學重點</div><div class="td">SBX 可能在 parent 中間產生 offspring，也可能落在父代外側。</div></div>
+              <div class="tr"><div class="th">English</div><div class="td">SBX may create offspring between parents, but also outside the parent interval.</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>二、Polynomial Mutation 實驗區 <span class="small">Polynomial Mutation Laboratory</span></h2>
+      <p>用單一解的擾動分布來理解 mutation 的行為，並觀察靠近邊界時的非對稱現象。</p>
+    </div>
+    <div class="grid">
+      <div class="controls">
+        <div class="control-group">
+          <h3>基本參數 / Basic Parameters</h3>
+          <div class="label-row"><label for="x0">原始值 x / Original x</label><span class="val" id="x0v"></span></div>
+          <input id="x0" type="range" min="0" max="1" step="0.001" value="0.50">
+          <div class="row2">
+            <div>
+              <label for="lb2">Lower Bound</label>
+              <input id="lb2" type="number" step="0.1" value="0">
+            </div>
+            <div>
+              <label for="ub2">Upper Bound</label>
+              <input id="ub2" type="number" step="0.1" value="1">
+            </div>
+          </div>
+          <div class="label-row"><label for="etaM">η<sub>m</sub> / distribution index</label><span class="val" id="etaMv"></span></div>
+          <input id="etaM" type="range" min="1" max="100" step="1" value="20">
+          <div class="label-row"><label for="pm">Mutation Probability</label><span class="val" id="pmv"></span></div>
+          <input id="pm" type="range" min="0" max="1" step="0.01" value="1">
+          <label for="pmN">樣本數 / Sample Size</label>
+          <select id="pmN">
+            <option value="1">1（單次示範）</option>
+            <option value="50">50</option>
+            <option value="200" selected>200</option>
+            <option value="1000">1000</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <h3>預設情境 / Presets</h3>
+          <div class="btns">
+            <button class="purple" id="pmCenter">中央 / Center</button>
+            <button class="purple" id="pmLower">靠近下界 / Near lower bound</button>
+            <button class="purple" id="pmUpper">靠近上界 / Near upper bound</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <h3>操作 / Actions</h3>
+          <div class="btns">
+            <button class="purple" id="runPM">重新抽樣 / Resample</button>
+            <button class="secondary" id="togglePMFormula">顯示/隱藏公式</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="viz">
+        <div class="panel-grid">
+          <div class="viz-card">
+            <h3>1D 分布圖 / 1D Visualization</h3>
+            <canvas id="pmLine" width="720" height="240"></canvas>
+            <div class="insight" id="pmInsight"></div>
+            <div class="formula" id="pmFormula" style="display:none"></div>
+          </div>
+          <div class="viz-card">
+            <h3>直方圖 / Histogram</h3>
+            <canvas id="pmHist" width="720" height="240"></canvas>
+            <div class="table-like">
+              <div class="tr"><div class="th">教學重點</div><div class="td">靠近邊界時，Polynomial Mutation 的分布通常呈現不對稱，這正是 bound-aware 的效果。</div></div>
+              <div class="tr"><div class="th">English</div><div class="td">Near a boundary, polynomial mutation often becomes asymmetric because it is boundary-aware.</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>三、η 比較區 <span class="small">Distribution Index Comparison</span></h2>
+      <p>直接比較小 η 與大 η 的分布差異。左側較敢跳，右側較保守。</p>
+    </div>
+    <div class="compare-grid">
+      <div class="compare-card">
+        <div class="badge">Small η / 較強探索</div>
+        <h3 style="margin:10px 0 8px;">η = 2</h3>
+        <canvas id="cmpSmall" width="620" height="220"></canvas>
+        <div class="insight">當 η 較小時，樣本分布較寬，較容易出現遠離 parent 或原值的位置。 <br>When η is small, the distribution spreads out more, encouraging exploration.</div>
+      </div>
+      <div class="compare-card">
+        <div class="badge">Large η / 較強局部搜尋</div>
+        <h3 style="margin:10px 0 8px;">η = 35</h3>
+        <canvas id="cmpLarge" width="620" height="220"></canvas>
+        <div class="insight">當 η 較大時，樣本分布較集中，更偏向在 parent 或原值附近做局部搜尋。 <br>When η is large, the distribution becomes concentrated and more exploitative.</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>四、進階：2D 視覺化 <span class="small">Advanced: 2D View</span></h2>
+      <p>這一區不是主教學畫面，而是補充說明：SBX 在多維情況下，是對每個變數分別做操作，因此 2D 中常呈現矩形式探索區域。</p>
+    </div>
+    <div class="compare-grid">
+      <div class="compare-card">
+        <h3 style="margin:0 0 8px;">2D Offspring Cloud</h3>
+        <canvas id="cloud2d" width="620" height="320"></canvas>
+        <div class="insight">這裡固定使用兩個 2D parent：P1=(0.25, 0.25), P2=(0.75, 0.75)。<br>請把它理解為兩個 1D SBX 的 Cartesian product，而不是一個整體 2D 幾何 crossover。</div>
+      </div>
+      <div class="compare-card">
+        <h3 style="margin:0 0 8px;">核心提醒 / Key Reminder</h3>
+        <div class="table-like">
+          <div class="tr"><div class="th">中文</div><div class="td">SBX 與 Polynomial Mutation 在 real-coded EA 中，通常都是對每一個 decision variable 個別操作。</div></div>
+          <div class="tr"><div class="th">English</div><div class="td">In real-coded evolutionary algorithms, SBX and polynomial mutation are usually applied independently to each decision variable.</div></div>
+          <div class="tr"><div class="th">所以</div><div class="td">1D 視覺化最接近數學本質；2D 視覺化則用來幫助理解多維探索形狀。</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>五、重點整理 <span class="small">Key Takeaways</span></h2>
+      <p>這個頁面的目的，不是背公式，而是看懂 operator 的行為。</p>
+    </div>
+    <div class="takeaways">
+      <div class="tk"><b>SBX</b><br>父代導向的 crossover。它不一定只在父代中間產生 offspring。</div>
+      <div class="tk"><b>Polynomial Mutation</b><br>單點導向的擾動。靠近邊界時，分布可能不對稱。</div>
+      <div class="tk"><b>η 的角色</b><br>η 小通常探索較強；η 大通常比較保守，偏向局部搜尋。</div>
+      <div class="tk"><b>1D 優先</b><br>1D 最適合教學；2D 是幫助理解多維搜索行為的補充圖像。</div>
+    </div>
+    <div class="footer-note">建議課堂操作方式：先讓學生在 1D 中調整 η 與 parent 距離，再觀察 2D cloud，最後請學生用自己的話說出 exploration / exploitation 的差別。</div>
+  </section>
+</main>
+
+<script>
+function clamp(x, a, b){ return Math.max(a, Math.min(b, x)); }
+function lerp(a,b,t){ return a + (b-a)*t; }
+function fmt(x){ return (+x).toFixed(3); }
+function rand(){ return Math.random(); }
+
+function sbxOne(y1, y2, yl, yu, eta, pc){
+  if (rand() > pc) return {c1:y1, c2:y2, u:null, betaq1:null, betaq2:null, performed:false};
+  if (Math.abs(y1-y2) < 1e-14) return {c1:y1, c2:y2, u:null, betaq1:null, betaq2:null, performed:false};
+  let x1 = Math.min(y1,y2), x2 = Math.max(y1,y2);
+  const u1 = rand();
+  let beta = 1 + (2*(x1-yl)/(x2-x1));
+  let alpha = 2 - Math.pow(beta, -(eta+1));
+  let betaq;
+  if (u1 <= 1/alpha) betaq = Math.pow(u1*alpha, 1/(eta+1));
+  else betaq = Math.pow(1/(2-u1*alpha), 1/(eta+1));
+  let c1 = 0.5*((x1+x2) - betaq*(x2-x1));
+
+  const u2 = rand();
+  beta = 1 + (2*(yu-x2)/(x2-x1));
+  alpha = 2 - Math.pow(beta, -(eta+1));
+  let betaq2;
+  if (u2 <= 1/alpha) betaq2 = Math.pow(u2*alpha, 1/(eta+1));
+  else betaq2 = Math.pow(1/(2-u2*alpha), 1/(eta+1));
+  let c2 = 0.5*((x1+x2) + betaq2*(x2-x1));
+
+  c1 = clamp(c1, yl, yu);
+  c2 = clamp(c2, yl, yu);
+
+  if (rand() < 0.5) [c1, c2] = [c2, c1];
+  return {c1,c2,u:[u1,u2],betaq1:betaq,betaq2:betaq2,performed:true, ordered:[x1,x2]};
+}
+
+function polyMutOne(x, xl, xu, eta, pm){
+  if (rand() > pm) return {xnew:x, deltaq:0, r:null, performed:false};
+  if (xu - xl < 1e-14) return {xnew:x, deltaq:0, r:null, performed:false};
+  const delta1 = (x - xl)/(xu - xl);
+  const delta2 = (xu - x)/(xu - xl);
+  const rnd = rand();
+  const mutPow = 1/(eta+1);
+  let deltaq;
+  if (rnd <= 0.5){
+    const xy = 1 - delta1;
+    const val = 2*rnd + (1 - 2*rnd)*Math.pow(xy, eta+1);
+    deltaq = Math.pow(val, mutPow) - 1;
+  }else{
+    const xy = 1 - delta2;
+    const val = 2*(1-rnd) + 2*(rnd-0.5)*Math.pow(xy, eta+1);
+    deltaq = 1 - Math.pow(val, mutPow);
+  }
+  let xnew = x + deltaq*(xu-xl);
+  xnew = clamp(xnew, xl, xu);
+  return {xnew, deltaq, r:rnd, performed:true};
+}
+
+function clearCanvas(ctx){
+  ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
+}
+function drawAxis(ctx, x0, y, w, minV, maxV){
+  ctx.strokeStyle = "#6b7280";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(x0, y);
+  ctx.lineTo(x0+w, y);
+  ctx.stroke();
+  for(let i=0;i<=10;i++){
+    const x = x0 + w*i/10;
+    ctx.beginPath();
+    ctx.moveTo(x, y-6);
+    ctx.lineTo(x, y+6);
+    ctx.stroke();
+    ctx.fillStyle = "#6b7280";
+    ctx.font = "12px sans-serif";
+    const val = minV + (maxV-minV)*i/10;
+    ctx.fillText(val.toFixed(2), x-12, y+22);
+  }
+}
+function toX(val, minV, maxV, left, width){
+  return left + (val-minV)/(maxV-minV) * width;
+}
+function drawLineDistribution(canvas, minV, maxV, specialPts, samples, colors){
+  const ctx = canvas.getContext('2d');
+  clearCanvas(ctx);
+  const W = canvas.width, H = canvas.height;
+  const left=42, right=20, top=18, axisY=130, width=W-left-right;
+
+  drawAxis(ctx, left, axisY, width, minV, maxV);
+
+  // bounds band
+  ctx.fillStyle = "#f8fafc";
+  ctx.fillRect(left, axisY-30, width, 60);
+
+  // samples
+  const n = samples.length;
+  samples.forEach((s, i)=>{
+    const x = toX(s, minV, maxV, left, width);
+    const layer = i % 6;
+    const y = axisY - 12 - layer*12;
+    ctx.fillStyle = colors.sample;
+    ctx.beginPath();
+    ctx.arc(x, y, n > 400 ? 2.3 : 3.3, 0, Math.PI*2);
+    ctx.fill();
+  });
+
+  specialPts.forEach(p=>{
+    const x = toX(p.value, minV, maxV, left, width);
+    ctx.strokeStyle = p.color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, axisY-42);
+    ctx.lineTo(x, axisY+42);
+    ctx.stroke();
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(x, axisY, 5, 0, Math.PI*2);
+    ctx.fill();
+    ctx.font = "bold 13px sans-serif";
+    ctx.fillText(p.label, x-16, axisY-50);
+  });
+}
+function drawHistogram(canvas, minV, maxV, data, color){
+  const ctx = canvas.getContext('2d');
+  clearCanvas(ctx);
+  const W=canvas.width, H=canvas.height;
+  const left=40, right=18, top=18, bottom=34, width=W-left-right, height=H-top-bottom;
+  ctx.strokeStyle="#94a3b8";
+  ctx.beginPath();
+  ctx.moveTo(left, top);
+  ctx.lineTo(left, top+height);
+  ctx.lineTo(left+width, top+height);
+  ctx.stroke();
+  const bins = 24;
+  const counts = new Array(bins).fill(0);
+  data.forEach(v=>{
+    let idx = Math.floor((v-minV)/(maxV-minV)*bins);
+    if(idx<0) idx=0;
+    if(idx>=bins) idx=bins-1;
+    counts[idx]++;
+  });
+  const maxC = Math.max(1,...counts);
+  for(let i=0;i<bins;i++){
+    const x = left + i*width/bins + 2;
+    const bw = width/bins - 4;
+    const bh = counts[i]/maxC * (height-8);
+    ctx.fillStyle = color;
+    ctx.fillRect(x, top+height-bh, bw, bh);
+  }
+  ctx.fillStyle="#6b7280";
+  ctx.font="12px sans-serif";
+  for(let i=0;i<=5;i++){
+    const x=left+i*width/5;
+    const val=minV+(maxV-minV)*i/5;
+    ctx.fillText(val.toFixed(2), x-12, top+height+20);
+  }
+}
+function draw2DCloud(canvas, pts, p1, p2, minV, maxV){
+  const ctx=canvas.getContext('2d');
+  clearCanvas(ctx);
+  const W=canvas.width,H=canvas.height,left=40,right=24,top=20,bottom=36,width=W-left-right,height=H-top-bottom;
+  ctx.strokeStyle="#94a3b8";
+  ctx.beginPath();
+  ctx.moveTo(left, top);
+  ctx.lineTo(left, top+height);
+  ctx.lineTo(left+width, top+height);
+  ctx.stroke();
+
+  function mx(v){ return left + (v-minV)/(maxV-minV)*width; }
+  function my(v){ return top+height - (v-minV)/(maxV-minV)*height; }
+
+  // light rectangle region
+  ctx.fillStyle="rgba(37,99,235,0.06)";
+  const rx=Math.min(mx(p1[0]),mx(p2[0])), ry=Math.min(my(p1[1]),my(p2[1]));
+  const rw=Math.abs(mx(p2[0])-mx(p1[0])), rh=Math.abs(my(p2[1])-my(p1[1]));
+  ctx.fillRect(rx, ry, rw, rh);
+
+  pts.forEach(p=>{
+    ctx.fillStyle="rgba(234,88,12,0.7)";
+    ctx.beginPath();
+    ctx.arc(mx(p[0]), my(p[1]), 2.7, 0, Math.PI*2);
+    ctx.fill();
+  });
+
+  [[p1,"P1"],[p2,"P2"]].forEach(([p,label])=>{
+    ctx.fillStyle="#2563eb";
+    ctx.beginPath();
+    ctx.arc(mx(p[0]), my(p[1]), 5, 0, Math.PI*2);
+    ctx.fill();
+    ctx.font="bold 13px sans-serif";
+    ctx.fillText(label, mx(p[0])+8, my(p[1])-8);
+  });
+
+  ctx.fillStyle="#6b7280"; ctx.font="12px sans-serif";
+  ctx.fillText("x₁", left+width+6, top+height+2);
+  ctx.fillText("x₂", left-18, top+8);
+}
+
+const E = id => document.getElementById(id);
+
+function refreshLabels(){
+  E("p1v").textContent = fmt(E("p1").value);
+  E("p2v").textContent = fmt(E("p2").value);
+  E("etaCv").textContent = E("etaC").value;
+  E("pcv").textContent = fmt(E("pc").value);
+  E("x0v").textContent = fmt(E("x0").value);
+  E("etaMv").textContent = E("etaM").value;
+  E("pmv").textContent = fmt(E("pm").value);
+}
+
+function runSBX(){
+  refreshLabels();
+  let p1 = parseFloat(E("p1").value), p2 = parseFloat(E("p2").value);
+  let lb = parseFloat(E("lb1").value), ub = parseFloat(E("ub1").value);
+  if (lb >= ub){ ub = lb + 1; E("ub1").value = ub; }
+  p1 = clamp(p1, lb, ub); p2 = clamp(p2, lb, ub);
+  E("p1").value = p1; E("p2").value = p2;
+  const eta = parseFloat(E("etaC").value), pc = parseFloat(E("pc").value), N = parseInt(E("sbxN").value,10);
+
+  const samples = [];
+  let detail = null;
+  for(let i=0;i<N;i++){
+    const r = sbxOne(p1,p2,lb,ub,eta,pc);
+    samples.push(r.c1);
+    if (N>1) samples.push(r.c2);
+    if(i===0) detail = r;
+  }
+  drawLineDistribution(E("sbxLine"), lb, ub,
+    [{value:p1,label:"P1",color:"#2563eb"},{value:p2,label:"P2",color:"#2563eb"}],
+    samples,
+    {sample:"#ea580c"}
+  );
+  drawHistogram(E("sbxHist"), lb, ub, samples, "#fb923c");
+
+  const dist = Math.abs(p1-p2);
+  let msgZh = dist < 0.12 ? "兩個 parent 很接近，因此 offspring 多半集中在附近。" :
+              dist > 0.45 ? "兩個 parent 距離較遠，因此 offspring 的可分布範圍也較寬。" :
+              "這是一個中等距離的 parent 組合，可同時觀察集中與擴散效果。";
+  let etaMsg = eta <= 5 ? "目前 ηc 很小，探索性較強。" :
+               eta >= 30 ? "目前 ηc 很大，分布會更集中。" :
+               "目前 ηc 為中等，兼具一定探索與局部搜尋傾向。";
+  E("sbxInsight").innerHTML = `${msgZh}<br>${etaMsg}<br><span class="small">English: Parent distance changes the spread of offspring, while η<sub>c</sub> controls how concentrated the distribution is.</span>`;
+
+  E("sbxFormula").textContent =
+`SBX（bounded version, simplified idea）
+
+Given parents y1, y2 and bounds [yl, yu]:
+
+1) Sort parents: x1 = min(y1,y2), x2 = max(y1,y2)
+2) Sample random numbers u
+3) Use ηc to compute beta_q
+4) Generate offspring:
+   c1 = 0.5 * ((x1 + x2) - beta_q * (x2 - x1))
+   c2 = 0.5 * ((x1 + x2) + beta_q * (x2 - x1))
+
+Single-sample detail / 單次抽樣細節:
+performed = ${detail.performed}
+u = ${detail.u ? detail.u.map(v=>fmt(v)).join(", ") : "N/A"}
+beta_q = ${detail.betaq1!=null ? fmt(detail.betaq1)+" , "+fmt(detail.betaq2) : "N/A"}
+offspring = (${fmt(detail.c1)}, ${fmt(detail.c2)})`;
+}
+
+function runPM(){
+  refreshLabels();
+  let x = parseFloat(E("x0").value);
+  let lb = parseFloat(E("lb2").value), ub = parseFloat(E("ub2").value);
+  if (lb >= ub){ ub = lb + 1; E("ub2").value = ub; }
+  x = clamp(x, lb, ub);
+  E("x0").value = x;
+  const eta = parseFloat(E("etaM").value), pm = parseFloat(E("pm").value), N = parseInt(E("pmN").value,10);
+  const samples = [];
+  let detail = null;
+  for(let i=0;i<N;i++){
+    const r = polyMutOne(x, lb, ub, eta, pm);
+    samples.push(r.xnew);
+    if(i===0) detail = r;
+  }
+
+  drawLineDistribution(E("pmLine"), lb, ub,
+    [{value:x,label:"x",color:"#7c3aed"}],
+    samples,
+    {sample:"#8b5cf6"}
+  );
+  drawHistogram(E("pmHist"), lb, ub, samples, "#a78bfa");
+
+  const rel = (x-lb)/(ub-lb);
+  let posMsg = rel < 0.15 ? "原始值靠近 lower bound，因此分布常會向右偏。" :
+               rel > 0.85 ? "原始值靠近 upper bound，因此分布常會向左偏。" :
+               "原始值位於區間中央附近，因此分布通常較接近對稱。";
+  let etaMsg = eta <= 5 ? "目前 ηm 很小，變異幅度較大，較敢跳。" :
+               eta >= 40 ? "目前 ηm 很大，變異偏向局部微調。" :
+               "目前 ηm 為中等，可觀察適中的擾動幅度。";
+  E("pmInsight").innerHTML = `${posMsg}<br>${etaMsg}<br><span class="small">English: The location of x relative to the bounds affects symmetry, while η<sub>m</sub> controls how far mutations tend to move.</span>`;
+
+  E("pmFormula").textContent =
+`Polynomial Mutation（bounded version, simplified idea）
+
+Given x and bounds [xl, xu]:
+
+1) Normalize distance to both bounds
+2) Sample a random number r
+3) Use ηm to compute mutation amount delta_q
+4) Mutate:
+   x' = x + delta_q * (xu - xl)
+
+Single-sample detail / 單次抽樣細節:
+performed = ${detail.performed}
+r = ${detail.r!=null ? fmt(detail.r) : "N/A"}
+delta_q = ${fmt(detail.deltaq)}
+x' = ${fmt(detail.xnew)}`;
+}
+
+function runCompare(){
+  const cS = E("cmpSmall"), cL = E("cmpLarge");
+  const p1 = 0.25, p2 = 0.75, lb = 0, ub = 1;
+  const small = [], large = [];
+  for(let i=0;i<400;i++){
+    const a = sbxOne(p1,p2,lb,ub,2,1);
+    const b = sbxOne(p1,p2,lb,ub,35,1);
+    small.push(a.c1); small.push(a.c2);
+    large.push(b.c1); large.push(b.c2);
+  }
+  drawHistogram(cS, lb, ub, small, "#fb923c");
+  drawHistogram(cL, lb, ub, large, "#60a5fa");
+}
+
+function run2D(){
+  const pts = [];
+  const p1 = [0.25,0.25], p2 = [0.75,0.75];
+  for(let i=0;i<500;i++){
+    const a = sbxOne(p1[0],p2[0],0,1,12,1);
+    const b = sbxOne(p1[1],p2[1],0,1,12,1);
+    pts.push([a.c1, b.c1]);
+  }
+  draw2DCloud(E("cloud2d"), pts, p1, p2, 0, 1);
+}
+
+["p1","p2","etaC","pc","lb1","ub1","sbxN"].forEach(id=>E(id).addEventListener("input", runSBX));
+["x0","etaM","pm","lb2","ub2","pmN"].forEach(id=>E(id).addEventListener("input", runPM));
+
+E("runSBX").addEventListener("click", runSBX);
+E("runPM").addEventListener("click", runPM);
+
+E("toggleSBXFormula").addEventListener("click", ()=>{
+  const el = E("sbxFormula"); el.style.display = el.style.display === "none" ? "block" : "none";
+});
+E("togglePMFormula").addEventListener("click", ()=>{
+  const el = E("pmFormula"); el.style.display = el.style.display === "none" ? "block" : "none";
+});
+
+E("sbxClose").addEventListener("click", ()=>{
+  E("p1").value = 0.45; E("p2").value = 0.55; E("etaC").value = 20; E("sbxN").value = 200; runSBX();
+});
+E("sbxFar").addEventListener("click", ()=>{
+  E("p1").value = 0.15; E("p2").value = 0.85; E("etaC").value = 8; E("sbxN").value = 200; runSBX();
+});
+E("sbxMid").addEventListener("click", ()=>{
+  E("p1").value = 0.30; E("p2").value = 0.65; E("etaC").value = 15; E("sbxN").value = 200; runSBX();
+});
+
+E("pmCenter").addEventListener("click", ()=>{
+  E("x0").value = 0.50; E("etaM").value = 20; E("pmN").value = 200; runPM();
+});
+E("pmLower").addEventListener("click", ()=>{
+  E("x0").value = 0.06; E("etaM").value = 20; E("pmN").value = 200; runPM();
+});
+E("pmUpper").addEventListener("click", ()=>{
+  E("x0").value = 0.94; E("etaM").value = 20; E("pmN").value = 200; runPM();
+});
+
+refreshLabels();
+runSBX();
+runPM();
+runCompare();
+run2D();
+</script>
+</body>
+</html>

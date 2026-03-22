@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GA × TSP 互動教學 v2.4A</title>
+<style>
+  :root{
+    --bg:#f5f7fb; --panel:#eef2f8; --card:#ffffff; --line:#c9d3e6;
+    --text:#183153; --muted:#5f7393; --blue:#3b6fd8; --orange:#d8871b;
+    --green:#1a9c4b; --red:#c74b50; --shadow:0 1px 2px rgba(0,0,0,.04);
+    --radius:14px; --soft:#f9fbff; --hl:#fff4db; --hl2:#eef5ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI","Noto Sans TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--text)}
+  .app{max-width:1700px;margin:6px auto;display:grid;grid-template-columns:300px 1fr;gap:10px;align-items:start}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:10px}
+  .left{position:sticky;top:6px;display:flex;flex-direction:column;gap:10px}
+  h1{font-size:16px;margin:0 0 6px 0;font-weight:800}
+  h2{font-size:14px;margin:0 0 8px 0;font-weight:800}
+  h3{font-size:13px;margin:0 0 6px 0;font-weight:800}
+  .small{font-size:11px;color:var(--muted);line-height:1.45}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+  label{display:block;font-size:11px;color:#4a6488;margin-bottom:3px}
+  input[type="number"],select{width:100%;border:1px solid #b9c7dd;background:#fff;border-radius:10px;padding:8px 10px;font-size:13px;color:var(--text);outline:none}
+  input[type="range"]{width:100%}
+  .btn{border:none;border-radius:11px;padding:10px 12px;font-size:13px;font-weight:700;cursor:pointer;transition:.15s}
+  .btn:hover{filter:brightness(.98)} .btn:active{transform:translateY(1px)}
+  .btn-blue{background:var(--blue);color:#fff}.btn-light{background:#dfe7f7;color:#24436c}.btn-orange{background:#f2e3be;color:#9b6200}
+  .seed-box,.hint-box,.mini-panel{margin-top:8px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:8px 10px;font-size:11px;color:#58708f;line-height:1.55}
+  .seed-box{font-size:12px;color:#45607f}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid #c9d6ef;background:#fff;font-size:10px;color:#607999;margin-right:4px}
+  .city-list,.log-box{margin-top:8px;border:1px solid var(--line);border-radius:12px;background:#fff;overflow:auto;padding:10px;font-size:12px;color:#29486f;line-height:1.65;white-space:pre-wrap}
+  .city-list{max-height:190px;font-size:11px;color:#44607d}.city-item{padding:3px 0;border-bottom:1px dashed #d6dfef}.city-item:last-child{border-bottom:none}
+  .main{display:flex;flex-direction:column;gap:10px}
+  .top-panel,.bottom-panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:8px}
+  .top-title{font-size:14px;font-weight:800;margin-bottom:4px}
+  .top-note{font-size:11px;color:var(--muted);margin-bottom:8px}
+  .cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px;min-width:0}
+  .card.best-current{border:2px solid #f0c14a;background:#fffaf0}.card.best-ever{box-shadow:inset 0 0 0 2px #84b5ff}
+  .card-title{font-size:12px;font-weight:800;margin-bottom:2px}.card-sub{font-size:11px;color:#4d6684;margin-bottom:4px}.mini-note{font-size:10px;color:#6b7f9a;margin-left:6px}
+  .route-canvas{width:100%;height:180px;display:block;background:#fff;border:1px solid #dde5f2;border-radius:10px}
+  .perm{margin-top:6px;font-size:10px;color:#556f91;line-height:1.45;word-break:break-word}
+  .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .stat-box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
+  .stat-label{font-size:10px;color:#6d7f98}.stat-value{font-size:14px;font-weight:800;margin-top:2px}
+  #historyCanvas{width:100%;height:360px;display:block;background:#fff;border:1px solid #dde5f2;border-radius:12px}
+  .legend{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:6px 0 8px;font-size:11px;color:#56708f}
+  .legend-item{display:flex;align-items:center;gap:6px}.dot{width:10px;height:10px;border-radius:50%;display:inline-block}.line{width:16px;height:0;border-top:3px solid;display:inline-block}
+  .accordion{display:flex;flex-direction:column;gap:8px}
+  .acc-item{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#f9fbff}
+  .acc-header{width:100%;text-align:left;border:none;background:#edf3ff;padding:10px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:800;color:#1f4473}
+  .acc-left{display:flex;align-items:center;gap:8px}.acc-arrow{width:16px;text-align:center;color:#335f9f}
+  .tag{font-size:10px;padding:2px 7px;border-radius:999px;border:1px solid #bdd1f2;background:#fff;color:#5d79a0;font-weight:700}
+  .acc-body{padding:10px;display:none;background:#f9fbff}.acc-item.active .acc-body{display:block}
+  .viz-grid{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px}
+  .viz-card{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:8px}
+  .viz-title{font-size:12px;font-weight:800;margin-bottom:6px;color:#24436c}
+  .viz-sub{font-size:11px;color:#5f7393;margin-bottom:6px}
+  .perm-row{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0 6px}
+  .perm-cell{min-width:24px;padding:4px 6px;border:1px solid #cfd8ea;border-radius:8px;background:#fff;font-size:11px;text-align:center;color:#27456d}
+  .perm-cell.cut{background:var(--hl);border-color:#efc775}
+  .perm-cell.swap{background:#ffe7e8;border-color:#e59aa0}
+  .perm-cell.accept{background:#eaf6ef;border-color:#a7d8ba}
+  .perm-cell.skip{background:#f2f3f7;border-color:#d8dbe5;color:#7d8796}
+  .perm-cell.empty{background:#f8fafc;color:#9ba8ba;border-style:dashed}
+  .bar-list{display:flex;flex-direction:column;gap:6px}
+  .bar-row{display:grid;grid-template-columns:44px 1fr 60px;gap:6px;align-items:center;font-size:11px}
+  .bar-track{position:relative;height:16px;background:#fff;border:1px solid #d7e0f0;border-radius:999px;overflow:hidden}
+  .bar-fill{position:absolute;left:0;top:0;bottom:0;background:#cfe0ff}
+  .bar-marker{position:absolute;top:-2px;bottom:-2px;width:2px;background:#d8871b}
+  .local-list{display:flex;flex-wrap:wrap;gap:6px}
+  .badge{display:inline-block;padding:3px 8px;border-radius:999px;background:#fff;border:1px solid #d4dceb;font-size:11px;color:#45607f}
+  .winner{background:#e8f7ee;border-color:#93cfad;color:#0c7d39;font-weight:700}
+  .survive{background:#eef5ff;border-color:#9fc0f4;color:#2457a0;font-weight:700}
+  .muted{color:#7c8ea8}
+  .inline-val{font-size:12px;color:#46617f;font-weight:700}
+  @media (max-width:1200px){.cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  @media (max-width:980px){.app{grid-template-columns:1fr}.left{position:static}.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media (max-width:700px){.cards{grid-template-columns:1fr}.stats{grid-template-columns:1fr}.row{grid-template-columns:1fr}#historyCanvas{height:300px}.bar-row{grid-template-columns:44px 1fr 50px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="left">
+    <div class="panel">
+      <h1>GA × TSP 互動教學</h1>
+      <div class="small">v2.4A：加入最近一次操作的可視化解釋。可直接看見 selection、OX、swap mutation 與 survival 的細節。</div>
+    </div>
+
+    <div class="panel">
+      <h2>GA 設定區</h2>
+      <div class="row">
+        <div><label>Population size</label><select id="popSize"><option value="4">4</option><option value="8" selected>8</option></select></div>
+        <div><label>Environmental selection</label><select id="envSelection"><option value="gen">Generation model</option><option value="plus">(N + N) selection</option><option value="twofour">2/4 selection</option></select></div>
+      </div>
+      <div class="row">
+        <div><label>Mating selection</label><select id="matingSelection"><option value="rank">Rank selection</option><option value="roulette">Roulette wheel selection</option><option value="tournament">k-tournament</option></select></div>
+        <div><label>k (for tournament)</label><input id="tourK" type="number" min="2" max="8" step="1" value="2"/></div>
+      </div>
+      <label>Crossover rate: <span class="inline-val" id="crVal">0.90</span></label><input id="crossoverRate" type="range" min="0" max="1" step="0.01" value="0.9"/>
+      <label>Mutation rate: <span class="inline-val" id="mrVal">0.10</span></label><input id="mutationRate" type="range" min="0" max="1" step="0.01" value="0.1"/>
+
+      <div class="hint-box">Roulette wheel 以 <b>1 / (distance + ε)</b> 當作抽樣權重。這裡的可視化區只展示本代中第一組代表性 mating / reproduction，讓教學更清楚。</div>
+
+      <div class="accordion" style="margin-top:8px">
+        <div class="acc-item active">
+          <button class="acc-header"><span class="acc-left"><span class="acc-arrow">▼</span><span>單步執行 / 觀察模式</span></span><span class="tag">Interactive</span></button>
+          <div class="acc-body" style="display:block">
+            <div class="row">
+              <button class="btn btn-blue" id="btnInitPop">初始化 population</button>
+              <button class="btn btn-light" id="btnOneGen">執行 1 代</button>
+            </div>
+            <div class="row">
+              <button class="btn btn-blue" id="btnAuto">自動播放</button>
+              <button class="btn btn-orange" id="btnStop">暫停</button>
+            </div>
+
+            <div class="mini-panel">
+              <div class="viz-title">最近一次操作的可視化解釋</div>
+              <div class="viz-sub">顯示本代中第一組 parent selection / crossover / mutation / survival 的代表性過程。</div>
+              <div class="viz-grid">
+                <div class="viz-card">
+                  <div class="viz-title">Selection</div>
+                  <div id="selectionViz" class="small">尚未執行任何演化步驟。</div>
+                </div>
+                <div class="viz-card">
+                  <div class="viz-title">Order Crossover (OX)</div>
+                  <div id="crossoverViz" class="small">尚未執行任何演化步驟。</div>
+                </div>
+                <div class="viz-card">
+                  <div class="viz-title">Swap Mutation</div>
+                  <div id="mutationViz" class="small">尚未執行任何演化步驟。</div>
+                </div>
+                <div class="viz-card">
+                  <div class="viz-title">Survival</div>
+                  <div id="survivalViz" class="small">尚未執行任何演化步驟。</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="legend">
+              <div class="legend-item"><span class="dot" style="background:#3b6fd8"></span>當代個體散點</div>
+              <div class="legend-item"><span class="line" style="border-color:#d8871b"></span>best of generation</div>
+              <div class="legend-item"><span class="line" style="border-color:#1a9c4b"></span>mean of generation</div>
+            </div>
+
+            <h3>Parents / Offspring / Survival Log</h3>
+            <div class="log-box" id="gaLog" style="max-height:240px"></div>
+          </div>
+        </div>
+
+        <div class="acc-item">
+          <button class="acc-header"><span class="acc-left"><span class="acc-arrow">▶</span><span>批次執行模式</span></span><span class="tag">Batch</span></button>
+          <div class="acc-body">
+            <div class="row">
+              <div><label>Generation number G</label><input id="batchG" type="number" min="1" step="1" value="30"/></div>
+              <div><label>Runs T</label><input id="batchT" type="number" min="1" step="1" value="10"/></div>
+            </div>
+            <div class="row">
+              <div><label>Init-pop seed start s</label><input id="batchSeedStart" type="number" step="1" value="100"/></div>
+              <div style="display:flex;align-items:end"><button class="btn btn-blue" id="btnBatchRun" style="width:100%">批次執行</button></div>
+            </div>
+            <div class="hint-box">固定目前城市地圖不變。第 i 次 run 以 s+i 為初始化族群亂數種子，回報該 run 在前 G 代內找到的 best-so-far 路徑長。</div>
+            <div class="log-box" id="batchLog" style="max-height:240px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>問題設定區</h2>
+      <div class="row">
+        <div><label>城市數量 c</label><input id="cityCount" type="number" min="5" max="12" step="1" value="8"/></div>
+        <div><label>Problem seed</label><input id="problemSeed" type="number" step="1" value="42"/></div>
+      </div>
+      <div class="row">
+        <button class="btn btn-blue" id="btnNewSeedCities">隨機生成（新 seed）</button>
+        <button class="btn btn-light" id="btnSameSeedCities">重新生成（同 seed）</button>
+      </div>
+      <div class="seed-box">目前 seed：<span id="currentSeedText">42</span></div>
+      <div style="margin-top:8px"><span class="pill">2D 座標範圍：0 ~ 100</span><span class="pill">closed tour</span><span class="pill">lower distance = better</span></div>
+      <div class="city-list" id="cityList"></div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="top-panel">
+      <div class="top-title">目前所有解的情況（TSP 路線圖）</div>
+      <div class="top-note">每張卡片顯示一個 permutation 對應的 closed tour。黃色框為當代最佳；淺藍框記為歷代最佳（best-so-far）。</div>
+      <div class="cards" id="cardsContainer"></div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-box"><div class="stat-label">Generation</div><div class="stat-value" id="statGen">0</div></div>
+      <div class="stat-box"><div class="stat-label">Current best</div><div class="stat-value" id="statCurBest">-</div></div>
+      <div class="stat-box"><div class="stat-label">Best so far</div><div class="stat-value" id="statBestEver">-</div></div>
+      <div class="stat-box"><div class="stat-label">Population mean</div><div class="stat-value" id="statMean">-</div></div>
+    </div>
+
+    <div class="bottom-panel">
+      <div class="top-title">族群 fitness 分布圖</div>
+      <div class="top-note">橫軸為 generation，縱軸為 closed tour 的總路徑長（越低越好）。</div>
+      <canvas id="historyCanvas"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  let rngSeed = 1 >>> 0;
+  function setSeed(s){ rngSeed = (Number(s) >>> 0); }
+  function rand(){ rngSeed = (1664525 * rngSeed + 1013904223) >>> 0; return rngSeed / 4294967296; }
+  function randInt(a,b){ return Math.floor(rand() * (b-a+1)) + a; }
+  function shuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=randInt(0,i); [a[i],a[j]]=[a[j],a[i]];} return a; }
+  function sampleKIndices(n,k){ const arr=Array.from({length:n},(_,i)=>i); for(let i=0;i<k;i++){ const j=randInt(i,n-1); [arr[i],arr[j]]=[arr[j],arr[i]];} return arr.slice(0,k); }
+  function clamp(v,lo,hi){ return Math.max(lo, Math.min(hi,v)); }
+  function fmt(x){ return Number(x).toFixed(2); }
+
+  let cities = [], population = [], generation = 0, history = [];
+  let bestSoFar = Infinity, bestSoFarPerm = null, autoTimer = null, currentProblemSeed = 42;
+  let gaLogLines = [], batchLogLines = [], lastStepInfo = null;
+
+  const el = id => document.getElementById(id);
+  const cityCountInput = el("cityCount"), problemSeedInput = el("problemSeed"), currentSeedText = el("currentSeedText");
+  const popSizeSel = el("popSize"), envSel = el("envSelection"), matingSel = el("matingSelection"), tourKInput = el("tourK");
+  const crInput = el("crossoverRate"), mrInput = el("mutationRate"), crVal = el("crVal"), mrVal = el("mrVal");
+  const cityList = el("cityList"), cardsContainer = el("cardsContainer"), gaLog = el("gaLog"), batchLog = el("batchLog");
+  const statGen = el("statGen"), statCurBest = el("statCurBest"), statBestEver = el("statBestEver"), statMean = el("statMean");
+  const historyCanvas = el("historyCanvas");
+
+  function setupAccordion(){
+    document.querySelectorAll(".acc-item").forEach(item => {
+      const header = item.querySelector(".acc-header");
+      const body = item.querySelector(".acc-body");
+      header.addEventListener("click", () => {
+        document.querySelectorAll(".acc-item").forEach(other => {
+          const b = other.querySelector(".acc-body");
+          const a = other.querySelector(".acc-arrow");
+          other.classList.remove("active");
+          b.style.display = "none";
+          a.textContent = "▶";
+        });
+        item.classList.add("active");
+        body.style.display = "block";
+        item.querySelector(".acc-arrow").textContent = "▼";
+      });
+    });
+  }
+
+  function distance(i,j){ const dx=cities[i].x-cities[j].x, dy=cities[i].y-cities[j].y; return Math.hypot(dx,dy); }
+  function routeLength(perm){ let s=0; for(let i=0;i<perm.length-1;i++) s += distance(perm[i],perm[i+1]); s += distance(perm[perm.length-1], perm[0]); return s; }
+  function makeIndividual(perm){ return {perm:perm.slice(), dist:routeLength(perm)}; }
+  function randomPermutation(n){ return shuffle(Array.from({length:n}, (_,i)=>i)); }
+
+  function initializePopulation(initSeed = null){
+    const n = Number(popSizeSel.value);
+    if(initSeed !== null) setSeed(initSeed);
+    population = [];
+    for(let i=0;i<n;i++) population.push(makeIndividual(randomPermutation(cities.length)));
+    generation = 0; history = []; bestSoFar = Infinity; bestSoFarPerm = null; gaLogLines = []; lastStepInfo = null;
+    updateBestSoFarFromPopulation(); pushHistoryPoint(); appendGaLog(`初始化完成：population size = ${n}`); renderAll();
+  }
+
+  function updateBestSoFarFromPopulation(){ for(const ind of population){ if(ind.dist < bestSoFar){ bestSoFar = ind.dist; bestSoFarPerm = ind.perm.slice(); } } }
+  function pushHistoryPoint(){ if(!population.length) return; const vals=population.map(x=>x.dist); history.push({gen:generation, values:vals.slice(), best:Math.min(...vals), mean:vals.reduce((a,b)=>a+b,0)/vals.length}); }
+
+  function rankProbabilities(pop){ const idx=[...pop.keys()].sort((a,b)=>pop[a].dist-pop[b].dist); const n=pop.length; const w=Array(n).fill(0); for(let r=0;r<n;r++) w[idx[r]]=n-r; return {weights:w, ranks:idx}; }
+  function rouletteWeights(pop){ const eps=1e-9; return pop.map(ind => 1/(ind.dist+eps)); }
+  function weightedPick(weights){
+    const sum=weights.reduce((a,b)=>a+b,0); let r=rand()*sum;
+    for(let i=0;i<weights.length;i++){ r -= weights[i]; if(r<=0) return {index:i, draw:null}; }
+    return {index:weights.length-1, draw:null};
+  }
+  function weightedPickWithDraw(weights){
+    const sum=weights.reduce((a,b)=>a+b,0), draw=rand()*sum; let r=draw;
+    for(let i=0;i<weights.length;i++){ r -= weights[i]; if(r<=0) return {index:i, draw, sum}; }
+    return {index:weights.length-1, draw, sum};
+  }
+
+  function selectOneDetailed(pop){
+    const method = matingSel.value;
+    if(method === "rank"){
+      const {weights, ranks} = rankProbabilities(pop);
+      const pick = weightedPickWithDraw(weights);
+      return {
+        index: pick.index,
+        detail: {method:"rank", weights, ranks, draw:pick.draw, sum:pick.sum, selected:pick.index}
+      };
+    }else if(method === "roulette"){
+      const weights = rouletteWeights(pop);
+      const pick = weightedPickWithDraw(weights);
+      return {
+        index: pick.index,
+        detail: {method:"roulette", weights, draw:pick.draw, sum:pick.sum, selected:pick.index}
+      };
+    }else{
+      let k = clamp(Number(tourKInput.value), 2, pop.length);
+      const cand = sampleKIndices(pop.length, k);
+      const sorted = cand.slice().sort((a,b)=>pop[a].dist-pop[b].dist);
+      return {
+        index: sorted[0],
+        detail: {method:"tournament", k, candidates:cand.slice(), winner:sorted[0]}
+      };
+    }
+  }
+  function selectTwoDetailed(pop){
+    const A = selectOneDetailed(pop);
+    let B = selectOneDetailed(pop), safe=0;
+    while(B.index === A.index && safe<30){ B = selectOneDetailed(pop); safe++; }
+    return {a:A.index, b:B.index, d1:A.detail, d2:B.detail};
+  }
+
+  function orderCrossoverDetailed(p1, p2){
+    const n = p1.length; let c1 = randInt(0,n-2), c2 = randInt(c1+1,n-1);
+    function ox(a,b){
+      const child = Array(n).fill(null);
+      for(let i=c1;i<=c2;i++) child[i] = a[i];
+      const afterCopy = child.slice();
+      let ptr=(c2+1)%n, scan=(c2+1)%n;
+      const scanOrder=[], accepted=[], skipped=[], placement=[];
+      while(child.includes(null)){
+        const gene = b[scan];
+        scanOrder.push(gene);
+        if(!child.includes(gene)){
+          child[ptr] = gene;
+          accepted.push(gene);
+          placement.push({pos:ptr, gene});
+          ptr = (ptr+1)%n;
+        }else{
+          skipped.push(gene);
+        }
+        scan = (scan+1)%n;
+      }
+      return {child, afterCopy, scanOrder, accepted, skipped, placement};
+    }
+    const A = ox(p1,p2), B = ox(p2,p1);
+    return {cuts:[c1,c2], childA:A.child, childB:B.child, detailA:A, detailB:B};
+  }
+
+  function swapMutationDetailed(perm){
+    const a = randInt(0,perm.length-1); let b = randInt(0,perm.length-1); while(b===a) b = randInt(0,perm.length-1);
+    const before = perm.slice(), out = perm.slice(); [out[a],out[b]] = [out[b],out[a]];
+    return {perm:out, swap:[a,b], before};
+  }
+  function maybeCrossoverDetailed(p1,p2){
+    const cr = Number(crInput.value);
+    if(rand() < cr){
+      const cx = orderCrossoverDetailed(p1,p2);
+      return {applied:true, ...cx};
+    }
+    return {
+      applied:false, cuts:null, childA:p1.slice(), childB:p2.slice(),
+      detailA:{afterCopy:p1.slice(), scanOrder:[], accepted:[], skipped:[], placement:[], child:p1.slice()},
+      detailB:{afterCopy:p2.slice(), scanOrder:[], accepted:[], skipped:[], placement:[], child:p2.slice()}
+    };
+  }
+  function maybeMutateDetailed(perm){
+    const mr = Number(mrInput.value);
+    if(rand() < mr){ const m = swapMutationDetailed(perm); return {applied:true, ...m}; }
+    return {applied:false, perm:perm.slice(), swap:null, before:perm.slice()};
+  }
+
+  function bestIndices(pop,nTake){ return [...pop.keys()].sort((a,b)=>pop[a].dist-pop[b].dist).slice(0,nTake); }
+  function describePerm(p){ return "[" + p.join(", ") + "]"; }
+  function appendGaLog(text){ gaLogLines.push(text); if(gaLogLines.length>300) gaLogLines=gaLogLines.slice(-300); gaLog.textContent=gaLogLines.join("\\n\\n"); gaLog.scrollTop=gaLog.scrollHeight; }
+  function appendBatchLog(text){ batchLogLines.push(text); if(batchLogLines.length>500) batchLogLines=batchLogLines.slice(-500); batchLog.textContent=batchLogLines.join("\\n\\n"); batchLog.scrollTop=batchLog.scrollHeight; }
+
+  function oneGeneration(){
+    if(!population.length){ appendGaLog("尚未初始化 population。"); return; }
+    const env = envSel.value, N = population.length;
+    let logParts = [], repInfo = null;
+
+    if(env === "gen"){
+      let offspring = [];
+      let recordDone = false;
+      while(offspring.length < N){
+        const sel = selectTwoDetailed(population);
+        const p1 = population[sel.a], p2 = population[sel.b];
+        const cx = maybeCrossoverDetailed(p1.perm, p2.perm);
+        const ma = maybeMutateDetailed(cx.childA), mb = maybeMutateDetailed(cx.childB);
+        const cA = makeIndividual(ma.perm), cB = makeIndividual(mb.perm);
+        if(!recordDone){
+          repInfo = { env, selection:sel, parents:[{idx:sel.a, ind:p1},{idx:sel.b, ind:p2}], crossover:cx, mutation:{A:ma,B:mb}, offspring:[cA,cB] };
+          recordDone = true;
+        }
+        logParts.push(`Parents: P${sel.a} ${describePerm(p1.perm)} | P${sel.b} ${describePerm(p2.perm)}\nOX: ${cx.applied ? "yes" : "no"}${cx.applied ? `, cuts = [${cx.cuts[0]}, ${cx.cuts[1]}]` : ""}\nChild A: ${describePerm(cA.perm)} | distance = ${fmt(cA.dist)}\nChild B: ${describePerm(cB.perm)} | distance = ${fmt(cB.dist)}\nMutation A: ${ma.applied ? `swap(${ma.swap[0]},${ma.swap[1]})` : "none"} | Mutation B: ${mb.applied ? `swap(${mb.swap[0]},${mb.swap[1]})` : "none"}`);
+        offspring.push(cA); if(offspring.length < N) offspring.push(cB);
+      }
+      population = offspring.slice(0,N);
+      if(repInfo) repInfo.survival = {mode:"gen", text:"generation model → 全部以 offspring 取代 parents。"};
+      logParts.push("Survival: generation model → 全部以 offspring 取代 parent。");
+    } else if(env === "plus"){
+      let offspring = [];
+      let recordDone = false;
+      while(offspring.length < N){
+        const sel = selectTwoDetailed(population);
+        const p1 = population[sel.a], p2 = population[sel.b];
+        const cx = maybeCrossoverDetailed(p1.perm, p2.perm);
+        const ma = maybeMutateDetailed(cx.childA), mb = maybeMutateDetailed(cx.childB);
+        const cA = makeIndividual(ma.perm), cB = makeIndividual(mb.perm);
+        if(!recordDone){
+          repInfo = { env, selection:sel, parents:[{idx:sel.a, ind:p1},{idx:sel.b, ind:p2}], crossover:cx, mutation:{A:ma,B:mb}, offspring:[cA,cB] };
+          recordDone = true;
+        }
+        logParts.push(`Parents: P${sel.a} ${describePerm(p1.perm)} | P${sel.b} ${describePerm(p2.perm)}\nOX: ${cx.applied ? "yes" : "no"}${cx.applied ? `, cuts = [${cx.cuts[0]}, ${cx.cuts[1]}]` : ""}\nChild A: ${describePerm(cA.perm)} | distance = ${fmt(cA.dist)}\nChild B: ${describePerm(cB.perm)} | distance = ${fmt(cB.dist)}\nMutation A: ${ma.applied ? `swap(${ma.swap[0]},${ma.swap[1]})` : "none"} | Mutation B: ${mb.applied ? `swap(${mb.swap[0]},${mb.swap[1]})` : "none"}`);
+        offspring.push(cA); if(offspring.length < N) offspring.push(cB);
+      }
+      const pool = population.concat(offspring.slice(0,N));
+      const keep = bestIndices(pool, N);
+      population = keep.map(i => pool[i]);
+      if(repInfo){
+        repInfo.survival = {
+          mode:"plus",
+          local: [
+            {src:`P${repInfo.parents[0].idx}`, dist:repInfo.parents[0].ind.dist},
+            {src:`P${repInfo.parents[1].idx}`, dist:repInfo.parents[1].ind.dist},
+            {src:`C1`, dist:repInfo.offspring[0].dist},
+            {src:`C2`, dist:repInfo.offspring[1].dist},
+          ].sort((a,b)=>a.dist-b.dist)
+        };
+      }
+      logParts.push("Survival: (N+N) selection → 從 parent + offspring 中保留最佳的 N 個。");
+    } else {
+      let newPop = population.slice(); let pairCount = Math.ceil(N/2); let recordDone = false;
+      for(let t=0;t<pairCount;t++){
+        const sel = selectTwoDetailed(newPop);
+        const p1 = newPop[sel.a], p2 = newPop[sel.b];
+        const cx = maybeCrossoverDetailed(p1.perm, p2.perm);
+        const ma = maybeMutateDetailed(cx.childA), mb = maybeMutateDetailed(cx.childB);
+        const cA = makeIndividual(ma.perm), cB = makeIndividual(mb.perm);
+        const local = [{src:`P${sel.a}`, ind:p1},{src:`P${sel.b}`, ind:p2},{src:`C1`, ind:cA},{src:`C2`, ind:cB}].sort((a,b)=>a.ind.dist-b.ind.dist);
+        if(!recordDone){
+          repInfo = { env, selection:sel, parents:[{idx:sel.a, ind:p1},{idx:sel.b, ind:p2}], crossover:cx, mutation:{A:ma,B:mb}, offspring:[cA,cB], survival:{mode:"twofour", local:local.map(x=>({src:x.src, dist:x.ind.dist})), survived:[local[0].src, local[1].src]} };
+          recordDone = true;
+        }
+        logParts.push(`Parents: P${sel.a} ${describePerm(p1.perm)} | P${sel.b} ${describePerm(p2.perm)}\nOX: ${cx.applied ? "yes" : "no"}${cx.applied ? `, cuts = [${cx.cuts[0]}, ${cx.cuts[1]}]` : ""}\nChild A: ${describePerm(cA.perm)} | distance = ${fmt(cA.dist)}\nChild B: ${describePerm(cB.perm)} | distance = ${fmt(cB.dist)}\nMutation A: ${ma.applied ? `swap(${ma.swap[0]},${ma.swap[1]})` : "none"} | Mutation B: ${mb.applied ? `swap(${mb.swap[0]},${mb.swap[1]})` : "none"}\nSurvival(2/4): 保留 ${local[0].src}, ${local[1].src}`);
+        newPop[sel.a] = local[0].ind; newPop[sel.b] = local[1].ind;
+      }
+      population = newPop;
+    }
+
+    lastStepInfo = repInfo;
+    generation++; updateBestSoFarFromPopulation(); pushHistoryPoint();
+    appendGaLog(logParts.join("\\n\\n------------------------------\\n\\n"));
+    renderAll();
+  }
+
+  function runOneGenerationPure(pop, config){
+    const {matingMethod, tournamentK, crossoverRate, mutationRate, envMode} = config;
+    function selectOnePure(arr){
+      if(matingMethod === "rank"){
+        const idx=[...arr.keys()].sort((a,b)=>arr[a].dist-arr[b].dist), n=arr.length, weights=Array(n).fill(0);
+        for(let r=0;r<n;r++) weights[idx[r]] = n-r;
+        return weightedPickWithDraw(weights).index;
+      }else if(matingMethod === "roulette"){
+        return weightedPickWithDraw(arr.map(ind => 1/(ind.dist+1e-9))).index;
+      }else{
+        const k=clamp(tournamentK,2,arr.length), cand=sampleKIndices(arr.length,k).sort((a,b)=>arr[a].dist-arr[b].dist);
+        return cand[0];
+      }
+    }
+    function selectTwoPure(arr){ let a=selectOnePure(arr), b=selectOnePure(arr), safe=0; while(b===a&&safe<30){b=selectOnePure(arr);safe++;} return [a,b]; }
+    function maybeCx(a,b){ if(rand()<crossoverRate) return orderCrossoverDetailed(a,b); return {childA:a.slice(), childB:b.slice()}; }
+    function maybeMu(p){ if(rand()<mutationRate) return swapMutationDetailed(p).perm; return p.slice(); }
+    const N=pop.length;
+    if(envMode === "gen"){
+      let off=[]; while(off.length<N){ const [i,j]=selectTwoPure(pop), cx=maybeCx(pop[i].perm,pop[j].perm); off.push(makeIndividual(maybeMu(cx.childA))); if(off.length<N) off.push(makeIndividual(maybeMu(cx.childB))); } return off.slice(0,N);
+    }else if(envMode === "plus"){
+      let off=[]; while(off.length<N){ const [i,j]=selectTwoPure(pop), cx=maybeCx(pop[i].perm,pop[j].perm); off.push(makeIndividual(maybeMu(cx.childA))); if(off.length<N) off.push(makeIndividual(maybeMu(cx.childB))); } const pool=pop.concat(off.slice(0,N)); return bestIndices(pool,N).map(i=>pool[i]);
+    }else{
+      let newPop=pop.slice(); const pairCount=Math.ceil(N/2);
+      for(let t=0;t<pairCount;t++){ const [i,j]=selectTwoPure(newPop), cx=maybeCx(newPop[i].perm,newPop[j].perm), cA=makeIndividual(maybeMu(cx.childA)), cB=makeIndividual(maybeMu(cx.childB)); const local=[newPop[i],newPop[j],cA,cB].sort((a,b)=>a.dist-b.dist); newPop[i]=local[0]; newPop[j]=local[1]; }
+      return newPop;
+    }
+  }
+
+  function runBatch(){
+    if(!cities.length){ appendBatchLog("尚未建立城市地圖。"); return; }
+    const G = Math.max(1, Number(el("batchG").value)), T = Math.max(1, Number(el("batchT").value)), s0 = Number(el("batchSeedStart").value), N = Number(popSizeSel.value);
+    const config = { matingMethod:matingSel.value, tournamentK:Number(tourKInput.value), crossoverRate:Number(crInput.value), mutationRate:Number(mrInput.value), envMode:envSel.value };
+    batchLogLines = [];
+    appendBatchLog(`Batch run started...\nProblem seed = ${currentProblemSeed}\nPopulation size = ${N}, G = ${G}, T = ${T}, init-pop seed start = ${s0}`);
+    let results = [];
+    for(let r=0;r<T;r++){
+      const initSeed = s0 + r; setSeed(initSeed);
+      let pop=[]; for(let i=0;i<N;i++) pop.push(makeIndividual(randomPermutation(cities.length)));
+      let runBest = Math.min(...pop.map(x=>x.dist));
+      for(let g=1; g<=G; g++){ pop = runOneGenerationPure(pop, config); const curBest=Math.min(...pop.map(x=>x.dist)); if(curBest<runBest) runBest=curBest; }
+      results.push(runBest); appendBatchLog(`Run ${r+1} / ${T}, init seed = ${s0}+${r}, best-so-far = ${fmt(runBest)}`);
+    }
+    const minV=Math.min(...results), maxV=Math.max(...results), avgV=results.reduce((a,b)=>a+b,0)/results.length;
+    appendBatchLog(`Summary: min = ${fmt(minV)}, average = ${fmt(avgV)}, max = ${fmt(maxV)}`);
+  }
+
+  function generateCitiesWithSeed(seed){
+    currentProblemSeed = Number(seed); setSeed(currentProblemSeed);
+    const c = clamp(Number(cityCountInput.value), 5, 12); cityCountInput.value = c;
+    const used = new Set(); cities = [];
+    while(cities.length < c){ const x = randInt(0,100), y = randInt(0,100), key = `${x},${y}`; if(!used.has(key)){ used.add(key); cities.push({x,y}); } }
+    population=[]; generation=0; history=[]; bestSoFar=Infinity; bestSoFarPerm=null; gaLogLines=[]; gaLog.textContent=""; lastStepInfo=null; renderAll();
+  }
+
+  function updateCityList(){ cityList.innerHTML = cities.map((p,i)=>`<div class="city-item">City ${i} → (${p.x.toFixed(1)}, ${p.y.toFixed(1)})</div>`).join(""); }
+
+  function renderPerm(perm, opts={}){
+    const cut = opts.cutRange || null, highlightSwap = opts.swapPos || null, emptyFromNull = opts.emptyFromNull || false, acceptedGenes = opts.acceptedGenes || [], skippedGenes = opts.skippedGenes || [];
+    const wrap = document.createElement("div"); wrap.className = "perm-row";
+    perm.forEach((g, idx) => {
+      const span = document.createElement("span"); span.className = "perm-cell";
+      if(g === null && emptyFromNull){ span.classList.add("empty"); span.textContent = "_"; }
+      else { span.textContent = g; }
+      if(cut && idx >= cut[0] && idx <= cut[1]) span.classList.add("cut");
+      if(highlightSwap && (idx === highlightSwap[0] || idx === highlightSwap[1])) span.classList.add("swap");
+      wrap.appendChild(span);
+    });
+    return wrap;
+  }
+  function renderGeneSequence(genes, mode){
+    const wrap=document.createElement("div"); wrap.className="perm-row";
+    genes.forEach(g => { const s=document.createElement("span"); s.className="perm-cell " + (mode||""); s.textContent=g; wrap.appendChild(s); });
+    return wrap;
+  }
+  function clearNode(node, text=""){ node.innerHTML = ""; if(text) node.textContent = text; }
+
+  function updateVisualExplainer(){
+    const selectionViz = el("selectionViz"), crossoverViz = el("crossoverViz"), mutationViz = el("mutationViz"), survivalViz = el("survivalViz");
+    if(!lastStepInfo){
+      selectionViz.textContent = crossoverViz.textContent = mutationViz.textContent = survivalViz.textContent = "尚未執行任何演化步驟。";
+      return;
+    }
+
+    // Selection
+    selectionViz.innerHTML = "";
+    const s = lastStepInfo.selection;
+    [s.d1, s.d2].forEach((d, idx) => {
+      const box = document.createElement("div");
+      box.style.marginBottom = "8px";
+      const ttl = document.createElement("div");
+      ttl.className = "viz-sub";
+      ttl.innerHTML = `<b>Parent ${idx+1}</b> selection`;
+      box.appendChild(ttl);
+
+      if(d.method === "tournament"){
+        const list = document.createElement("div"); list.className = "local-list";
+        d.candidates.forEach(id => {
+          const sp = document.createElement("span");
+          sp.className = "badge" + (id === d.winner ? " winner" : "");
+          sp.textContent = `I${id}: ${fmt(populationSnapshotDistance(lastStepInfo.parents, id, d.candidates))}`;
+          list.appendChild(sp);
+        });
+        box.appendChild(list);
+        const note = document.createElement("div"); note.className = "small"; note.style.marginTop = "6px";
+        note.textContent = `k = ${d.k}，winner = Individual ${d.winner}`;
+        box.appendChild(note);
+      } else {
+        const weights = d.weights.slice();
+        const sum = weights.reduce((a,b)=>a+b,0);
+        const barList = document.createElement("div"); barList.className = "bar-list";
+        weights.forEach((w, i) => {
+          const row = document.createElement("div"); row.className = "bar-row";
+          const lab = document.createElement("div"); lab.textContent = `I${i}`;
+          const tr = document.createElement("div"); tr.className = "bar-track";
+          const fill = document.createElement("div"); fill.className = "bar-fill"; fill.style.width = `${(w/Math.max(...weights))*100}%`;
+          tr.appendChild(fill);
+          if(i === d.selected){
+            const mk = document.createElement("div"); mk.className = "bar-marker";
+            let left = (d.draw / sum) * 100;
+            left = Math.max(0, Math.min(99, left));
+            mk.style.left = `${left}%`; tr.appendChild(mk);
+          }
+          const val = document.createElement("div"); val.textContent = `${((w/sum)*100).toFixed(1)}%`;
+          row.appendChild(lab); row.appendChild(tr); row.appendChild(val); barList.appendChild(row);
+        });
+        box.appendChild(barList);
+        const note = document.createElement("div"); note.className = "small"; note.style.marginTop = "6px";
+        note.textContent = `${d.method === "roulette" ? "Roulette wheel" : "Rank"} → selected = Individual ${d.selected}`;
+        box.appendChild(note);
+      }
+      selectionViz.appendChild(box);
+    });
+
+    // Crossover
+    crossoverViz.innerHTML = "";
+    const cx = lastStepInfo.crossover;
+    if(!cx.applied){
+      const p = document.createElement("div"); p.className = "small"; p.textContent = "這次未發生 crossover，children 直接複製 parents。";
+      crossoverViz.appendChild(p);
+      const a = document.createElement("div"); a.className = "viz-sub"; a.textContent = "Parent A / Child A"; crossoverViz.appendChild(a);
+      crossoverViz.appendChild(renderPerm(lastStepInfo.parents[0].ind.perm));
+      const b = document.createElement("div"); b.className = "viz-sub"; b.textContent = "Parent B / Child B"; crossoverViz.appendChild(b);
+      crossoverViz.appendChild(renderPerm(lastStepInfo.parents[1].ind.perm));
+    } else {
+      const info = document.createElement("div"); info.className = "small"; info.innerHTML = `Cuts = <b>[${cx.cuts[0]}, ${cx.cuts[1]}]</b>`;
+      crossoverViz.appendChild(info);
+
+      const pa = document.createElement("div"); pa.className = "viz-sub"; pa.textContent = "Parent A"; crossoverViz.appendChild(pa);
+      crossoverViz.appendChild(renderPerm(lastStepInfo.parents[0].ind.perm, {cutRange:cx.cuts}));
+      const pb = document.createElement("div"); pb.className = "viz-sub"; pb.textContent = "Parent B"; crossoverViz.appendChild(pb);
+      crossoverViz.appendChild(renderPerm(lastStepInfo.parents[1].ind.perm, {cutRange:cx.cuts}));
+
+      const ca1 = document.createElement("div"); ca1.className = "viz-sub"; ca1.textContent = "Child A after copy"; crossoverViz.appendChild(ca1);
+      crossoverViz.appendChild(renderPerm(cx.detailA.afterCopy, {cutRange:cx.cuts, emptyFromNull:true}));
+      const ca2 = document.createElement("div"); ca2.className = "viz-sub"; ca2.textContent = "Child A accepted fill order"; crossoverViz.appendChild(ca2);
+      crossoverViz.appendChild(renderGeneSequence(cx.detailA.accepted.length ? cx.detailA.accepted : ["none"], cx.detailA.accepted.length ? "accept" : ""));
+      const ca3 = document.createElement("div"); ca3.className = "viz-sub"; ca3.textContent = "Child A final"; crossoverViz.appendChild(ca3);
+      crossoverViz.appendChild(renderPerm(cx.childA, {cutRange:cx.cuts}));
+
+      const cb1 = document.createElement("div"); cb1.className = "viz-sub"; cb1.textContent = "Child B after copy"; crossoverViz.appendChild(cb1);
+      crossoverViz.appendChild(renderPerm(cx.detailB.afterCopy, {cutRange:cx.cuts, emptyFromNull:true}));
+      const cb2 = document.createElement("div"); cb2.className = "viz-sub"; cb2.textContent = "Child B accepted fill order"; crossoverViz.appendChild(cb2);
+      crossoverViz.appendChild(renderGeneSequence(cx.detailB.accepted.length ? cx.detailB.accepted : ["none"], cx.detailB.accepted.length ? "accept" : ""));
+      const cb3 = document.createElement("div"); cb3.className = "viz-sub"; cb3.textContent = "Child B final"; crossoverViz.appendChild(cb3);
+      crossoverViz.appendChild(renderPerm(cx.childB, {cutRange:cx.cuts}));
+    }
+
+    // Mutation
+    mutationViz.innerHTML = "";
+    ["A","B"].forEach(ch => {
+      const m = lastStepInfo.mutation[ch];
+      const title = document.createElement("div"); title.className = "viz-sub"; title.textContent = `Child ${ch}`;
+      mutationViz.appendChild(title);
+      if(!m.applied){
+        const p = document.createElement("div"); p.className = "small"; p.textContent = "Mutation: none";
+        mutationViz.appendChild(p);
+        mutationViz.appendChild(renderPerm(m.before));
+      } else {
+        const beforeTxt = document.createElement("div"); beforeTxt.className = "small"; beforeTxt.textContent = `Before mutation, swap positions = (${m.swap[0]}, ${m.swap[1]})`;
+        mutationViz.appendChild(beforeTxt);
+        mutationViz.appendChild(renderPerm(m.before, {swapPos:m.swap}));
+        const afterTxt = document.createElement("div"); afterTxt.className = "small"; afterTxt.style.marginTop = "4px"; afterTxt.textContent = "After mutation";
+        mutationViz.appendChild(afterTxt);
+        mutationViz.appendChild(renderPerm(m.perm, {swapPos:m.swap}));
+      }
+    });
+
+    // Survival
+    survivalViz.innerHTML = "";
+    const sv = lastStepInfo.survival || {mode:lastStepInfo.env};
+    if(sv.mode === "gen"){
+      const p = document.createElement("div"); p.className = "small"; p.textContent = "Generation model：全部以 offspring 取代 parents。";
+      survivalViz.appendChild(p);
+      const list = document.createElement("div"); list.className = "local-list";
+      ["C1","C2"].forEach(x => { const sp=document.createElement("span"); sp.className="badge survive"; sp.textContent=`${x} kept`; list.appendChild(sp); });
+      survivalViz.appendChild(list);
+    } else if(sv.mode === "plus"){
+      const p = document.createElement("div"); p.className = "small"; p.textContent = "(N + N) selection：本示例列出這 2 parents + 2 children 的局部比較；實際上完整演算法是從整個 parent + offspring pool 取前 N 名。";
+      survivalViz.appendChild(p);
+      const list = document.createElement("div"); list.className = "local-list";
+      sv.local.forEach((x, idx) => {
+        const sp=document.createElement("span"); sp.className="badge" + (idx < 2 ? " survive" : "");
+        sp.textContent=`${x.src}: ${fmt(x.dist)}`; list.appendChild(sp);
+      });
+      survivalViz.appendChild(list);
+    } else {
+      const p = document.createElement("div"); p.className = "small"; p.textContent = "2/4 selection：從 2 parents + 2 offspring 中保留最佳的 2 個。";
+      survivalViz.appendChild(p);
+      const list = document.createElement("div"); list.className = "local-list";
+      sv.local.forEach(x => {
+        const sp=document.createElement("span"); sp.className="badge" + (sv.survived.includes(x.src) ? " survive" : "");
+        sp.textContent=`${x.src}: ${fmt(x.dist)}`; list.appendChild(sp);
+      });
+      survivalViz.appendChild(list);
+    }
+  }
+
+  function populationSnapshotDistance(parents, id){
+    if(parents[0].idx === id) return parents[0].ind.dist;
+    if(parents[1].idx === id) return parents[1].ind.dist;
+    if(population[id]) return population[id].dist;
+    return NaN;
+  }
+
+  function renderAll(){
+    currentSeedText.textContent = currentProblemSeed; problemSeedInput.value = currentProblemSeed;
+    crVal.textContent = Number(crInput.value).toFixed(2); mrVal.textContent = Number(mrInput.value).toFixed(2);
+    const n = Number(popSizeSel.value); tourKInput.max = String(n); if(Number(tourKInput.value)>n) tourKInput.value=n; if(Number(tourKInput.value)<2) tourKInput.value=2;
+    updateCityList(); renderCards(); renderStats(); drawHistoryChart(); updateVisualExplainer();
+  }
+
+  function renderStats(){
+    statGen.textContent = String(generation);
+    if(!population.length){ statCurBest.textContent = "-"; statBestEver.textContent = bestSoFar<Infinity ? fmt(bestSoFar) : "-"; statMean.textContent = "-"; return; }
+    const vals = population.map(x=>x.dist); statCurBest.textContent = fmt(Math.min(...vals)); statBestEver.textContent = bestSoFar<Infinity ? fmt(bestSoFar) : "-"; statMean.textContent = fmt(vals.reduce((a,b)=>a+b,0)/vals.length);
+  }
+  function samePerm(a,b){ if(!a||!b||a.length!==b.length) return false; for(let i=0;i<a.length;i++) if(a[i]!==b[i]) return false; return true; }
+
+  function renderCards(){
+    cardsContainer.innerHTML = "";
+    if(!population.length){ cardsContainer.innerHTML = `<div class="card" style="grid-column:1/-1;">尚未初始化 population。請先在左側建立城市並按「初始化 population」。</div>`; return; }
+    const curBest = Math.min(...population.map(x=>x.dist));
+    population.forEach((ind, idx) => {
+      const card = document.createElement("div"); card.className = "card";
+      if(Math.abs(ind.dist-curBest)<1e-9) card.classList.add("best-current");
+      if(bestSoFarPerm && samePerm(ind.perm,bestSoFarPerm)) card.classList.add("best-ever");
+      const isCur = Math.abs(ind.dist-curBest)<1e-9, isEver = bestSoFarPerm && samePerm(ind.perm,bestSoFarPerm);
+      card.innerHTML = `<div class="card-title">Individual ${idx}${isCur ? `<span class="mini-note">Best in current generation</span>` : ""}${isEver ? `<span class="mini-note">Best-so-far</span>` : ""}</div><div class="card-sub">distance = ${fmt(ind.dist)}</div><canvas class="route-canvas" width="360" height="180"></canvas><div class="perm">perm = ${describePerm(ind.perm)}<br/>closed tour = ${ind.perm.join(" → ")} → ${ind.perm[0]}</div>`;
+      cardsContainer.appendChild(card); drawRouteCard(card.querySelector("canvas"), ind.perm, isCur);
+    });
+  }
+
+  function drawRouteCard(canvas, perm, highlight=false){
+    const ctx = canvas.getContext("2d"), dpr = window.devicePixelRatio || 1, rect = canvas.getBoundingClientRect();
+    const w=Math.max(260, rect.width || 320), h=Math.max(160, rect.height || 180); canvas.width=Math.floor(w*dpr); canvas.height=Math.floor(h*dpr); ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h); ctx.fillStyle="#fff"; ctx.fillRect(0,0,w,h);
+    const pad=26, plotW=w-2*pad, plotH=h-2*pad;
+    ctx.strokeStyle="#e6edf8"; ctx.lineWidth=1; for(let i=0;i<=5;i++){ const x=pad+plotW*i/5, y=pad+plotH*i/5; ctx.beginPath(); ctx.moveTo(x,pad); ctx.lineTo(x,pad+plotH); ctx.stroke(); ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(pad+plotW,y); ctx.stroke(); }
+    ctx.fillStyle="#7e90a9"; ctx.font="10px sans-serif"; ctx.fillText("x: 0 ~ 100", 6, 12); ctx.fillText("y: 0 ~ 100", w-50, 12);
+    function mapPoint(p){ return {x:pad + p.x/100*plotW, y:pad + (100-p.y)/100*plotH}; }
+    ctx.strokeStyle=highlight ? "#d8871b" : "#386fe2"; ctx.lineWidth=highlight ? 2.5 : 2; ctx.beginPath();
+    const first = mapPoint(cities[perm[0]]); ctx.moveTo(first.x, first.y);
+    for(let i=1;i<perm.length;i++){ const q=mapPoint(cities[perm[i]]); ctx.lineTo(q.x,q.y); }
+    ctx.lineTo(first.x, first.y); ctx.stroke();
+    for(let i=0;i<cities.length;i++){ const q=mapPoint(cities[i]); ctx.fillStyle="#fff"; ctx.strokeStyle="#2f3a4f"; ctx.lineWidth=1.2; ctx.beginPath(); ctx.arc(q.x,q.y,4.8,0,Math.PI*2); ctx.fill(); ctx.stroke(); ctx.fillStyle="#546c8f"; ctx.font="10px sans-serif"; ctx.fillText(String(i), q.x+5, q.y-5); }
+  }
+
+  function drawHistoryChart(){
+    const ctx = historyCanvas.getContext("2d"), dpr = window.devicePixelRatio || 1, rect = historyCanvas.getBoundingClientRect();
+    const cssW=Math.max(500, rect.width || 900), cssH=360; historyCanvas.width=Math.floor(cssW*dpr); historyCanvas.height=Math.floor(cssH*dpr); ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,cssW,cssH); ctx.fillStyle="#fff"; ctx.fillRect(0,0,cssW,cssH);
+    const padL=52,padR=20,padT=16,padB=38,W=cssW-padL-padR,H=cssH-padT-padB;
+    ctx.strokeStyle="#e6edf8"; ctx.lineWidth=1; for(let i=0;i<=5;i++){ const y=padT+H*i/5; ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+W,y); ctx.stroke(); } for(let i=0;i<=8;i++){ const x=padL+W*i/8; ctx.beginPath(); ctx.moveTo(x,padT); ctx.lineTo(x,padT+H); ctx.stroke(); }
+    ctx.strokeStyle="#9fb1cc"; ctx.lineWidth=1.2; ctx.beginPath(); ctx.moveTo(padL,padT); ctx.lineTo(padL,padT+H); ctx.lineTo(padL+W,padT+H); ctx.stroke();
+    if(!history.length){ ctx.fillStyle="#71839d"; ctx.font="12px sans-serif"; ctx.fillText("尚無資料。初始化 population 後即可觀察各代 fitness 分布。", padL+12, padT+24); return; }
+    const allVals = history.flatMap(h=>h.values), yMin=Math.min(...allVals,...history.map(h=>h.best),...history.map(h=>h.mean)), yMax=Math.max(...allVals,...history.map(h=>h.best),...history.map(h=>h.mean));
+    const ymin=yMin-0.05*(yMax-yMin||1), ymax=yMax+0.05*(yMax-yMin||1), maxGen=Math.max(...history.map(h=>h.gen)), xDen=Math.max(1,maxGen);
+    const X=g=>padL+(g/xDen)*W, Y=v=>padT+(1-(v-ymin)/(ymax-ymin||1))*H;
+    ctx.fillStyle="#6d8098"; ctx.font="11px sans-serif"; for(let i=0;i<=5;i++){ const v=ymin+(ymax-ymin)*(1-i/5), y=padT+H*i/5; ctx.fillText(fmt(v), 5, y+4); }
+    for(let i=0;i<=Math.min(8,xDen);i++){ const g=Math.round(i*xDen/Math.min(8,xDen)), x=X(g); ctx.fillText(String(g), x-4, padT+H+18); } ctx.fillText("Generation", padL, cssH-8);
+    ctx.fillStyle="#3b6fd8"; history.forEach(h=>h.values.forEach(v=>{ ctx.beginPath(); ctx.arc(X(h.gen),Y(v),3,0,Math.PI*2); ctx.fill(); }));
+    ctx.strokeStyle="#d8871b"; ctx.lineWidth=2.2; ctx.beginPath(); history.forEach((h,idx)=>{ const x=X(h.gen), y=Y(h.best); if(!idx) ctx.moveTo(x,y); else ctx.lineTo(x,y);}); ctx.stroke();
+    ctx.strokeStyle="#1a9c4b"; ctx.lineWidth=2.2; ctx.beginPath(); history.forEach((h,idx)=>{ const x=X(h.gen), y=Y(h.mean); if(!idx) ctx.moveTo(x,y); else ctx.lineTo(x,y);}); ctx.stroke();
+  }
+
+  crInput.addEventListener("input", renderAll); mrInput.addEventListener("input", renderAll);
+  popSizeSel.addEventListener("change", () => { const n=Number(popSizeSel.value); tourKInput.max=String(n); if(Number(tourKInput.value)>n) tourKInput.value=n; renderAll(); });
+  el("btnNewSeedCities").addEventListener("click", () => { const newSeed=Math.floor(Math.random()*1000000000); currentProblemSeed=newSeed; problemSeedInput.value=newSeed; generateCitiesWithSeed(newSeed); });
+  el("btnSameSeedCities").addEventListener("click", () => { currentProblemSeed=Number(problemSeedInput.value); generateCitiesWithSeed(currentProblemSeed); });
+  el("btnInitPop").addEventListener("click", () => initializePopulation(null));
+  el("btnOneGen").addEventListener("click", () => oneGeneration());
+  el("btnAuto").addEventListener("click", () => { if(autoTimer) return; autoTimer=setInterval(oneGeneration, 650); });
+  el("btnStop").addEventListener("click", () => { if(autoTimer){ clearInterval(autoTimer); autoTimer=null; } });
+  el("btnBatchRun").addEventListener("click", () => runBatch());
+  window.addEventListener("resize", renderAll);
+
+  setupAccordion();
+  generateCitiesWithSeed(currentProblemSeed);
+  renderAll();
+})();
+</script>
+</body>
+</html>
