@@ -364,8 +364,8 @@
 
   function bestIndices(pop,nTake){ return [...pop.keys()].sort((a,b)=>pop[a].dist-pop[b].dist).slice(0,nTake); }
   function describePerm(p){ return "[" + p.join(", ") + "]"; }
-  function appendGaLog(text){ gaLogLines.push(text); if(gaLogLines.length>300) gaLogLines=gaLogLines.slice(-300); gaLog.textContent=gaLogLines.join("\\n\\n"); gaLog.scrollTop=gaLog.scrollHeight; }
-  function appendBatchLog(text){ batchLogLines.push(text); if(batchLogLines.length>500) batchLogLines=batchLogLines.slice(-500); batchLog.textContent=batchLogLines.join("\\n\\n"); batchLog.scrollTop=batchLog.scrollHeight; }
+  function appendGaLog(text){ gaLogLines.push(text); if(gaLogLines.length>300) gaLogLines=gaLogLines.slice(-300); gaLog.textContent=gaLogLines.join("\n\n"); gaLog.scrollTop=gaLog.scrollHeight; }
+  function appendBatchLog(text){ batchLogLines.push(text); if(batchLogLines.length>500) batchLogLines=batchLogLines.slice(-500); batchLog.textContent=batchLogLines.join("\n\n"); batchLog.scrollTop=batchLog.scrollHeight; }
 
   function oneGeneration(){
     if(!population.length){ appendGaLog("尚未初始化 population。"); return; }
@@ -443,7 +443,7 @@
 
     lastStepInfo = repInfo;
     generation++; updateBestSoFarFromPopulation(); pushHistoryPoint();
-    appendGaLog(logParts.join("\\n\\n------------------------------\\n\\n"));
+    appendGaLog(logParts.join("\n\n------------------------------\n\n"));
     renderAll();
   }
 
