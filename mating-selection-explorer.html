@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Selection Explorer v3</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --panel: #ffffff;
+      --panel-soft: #fbfcfe;
+      --border: #d9e1ec;
+      --text: #1f2a37;
+      --muted: #5b6573;
+      --accent: #2563eb;
+      --accent-dark: #1d4ed8;
+      --best: #ef4444;
+      --bar: rgba(37, 99, 235, 0.75);
+      --bar2: rgba(16, 185, 129, 0.75);
+      --shadow: 0 6px 20px rgba(31, 42, 55, 0.08);
+      --shadow-soft: 0 3px 12px rgba(31, 42, 55, 0.06);
+      --radius-lg: 18px;
+      --radius-md: 14px;
+      --radius-sm: 12px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Noto Sans TC", Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.06), transparent 20%),
+        radial-gradient(circle at top right, rgba(16, 185, 129, 0.05), transparent 18%),
+        var(--bg);
+      line-height: 1.45;
+    }
+
+    .page {
+      max-width: 1800px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    .topbar {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 18px 20px;
+      margin-bottom: 16px;
+    }
+
+    .title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    h1, h2, h3 {
+      margin: 0 0 10px;
+      letter-spacing: 0.1px;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 6px;
+    }
+
+    h2 {
+      font-size: 21px;
+    }
+
+    h3 {
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .badge {
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: var(--accent-dark);
+      border: 1px solid #bfdbfe;
+      font-weight: 700;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(300px, 1fr) minmax(0, 3fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .left-col,
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      min-width: 0;
+    }
+
+    .left-col {
+      position: sticky;
+      top: 18px;
+      max-height: calc(100vh - 36px);
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      min-width: 0;
+    }
+
+    .panel.soft {
+      background: var(--panel-soft);
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .panel-desc {
+      color: var(--muted);
+      font-size: 13px;
+      margin: 0 0 8px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .control {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .note {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    input[type="number"],
+    input[type="range"],
+    select {
+      width: 100%;
+    }
+
+    input[type="number"],
+    select {
+      padding: 9px 11px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+
+    select {
+      padding: 9px 11px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+
+    input[type="number"]:focus,
+    select:focus {
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .range-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .range-value {
+      min-width: 50px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    button {
+      border: 0;
+      background: var(--accent);
+      color: white;
+      padding: 10px 16px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 800;
+      box-shadow: 0 4px 10px rgba(37, 99, 235, 0.18);
+      transition: transform .12s ease, opacity .12s ease, background .12s ease;
+    }
+
+    button:hover {
+      opacity: 0.96;
+      transform: translateY(-1px);
+    }
+
+    button.secondary {
+      background: #475569;
+      box-shadow: 0 4px 10px rgba(71, 85, 105, 0.16);
+    }
+
+    details {
+      margin-top: 10px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    .formula-note {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .chart-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 10px;
+      background: #fff;
+      box-shadow: var(--shadow-soft);
+      min-width: 0;
+    }
+
+    .chart-title {
+      font-weight: 800;
+      margin: 2px 2px 8px;
+      font-size: 14px;
+      color: #0f172a;
+    }
+
+    .chart-subtitle {
+      color: var(--muted);
+      font-size: 12px;
+      margin: -3px 2px 8px;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 250px;
+      min-width: 0;
+    }
+
+    .chart-wrap.fitness {
+      height: 290px;
+    }
+
+    .mini-stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .stat {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+
+    .stat .k {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .stat .v {
+      font-size: 18px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .section-hint {
+      color: var(--muted);
+      font-size: 13px;
+      margin: -2px 0 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      margin-top: 4px;
+      overflow: hidden;
+      border-radius: 14px;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 9px 10px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 800;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fcfdff;
+    }
+
+    .best-pill {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(239, 68, 68, 0.12);
+      color: #b91c1c;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .footer-note {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 8px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    @media (max-width: 1280px) {
+      .chart-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 980px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+      .left-col {
+        position: static;
+        max-height: none;
+        overflow: visible;
+      }
+      .chart-grid {
+        grid-template-columns: 1fr;
+      }
+      .mini-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        padding: 12px;
+      }
+      .topbar,
+      .panel {
+        padding: 14px;
+      }
+      .mini-stats {
+        grid-template-columns: 1fr;
+      }
+      .title-row {
+        align-items: start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <div class="title-row">
+        <div>
+          <h1>Selection Explorer v3</h1>
+          <p class="subtitle">比較不同 selection methods 的 <b>selection probability</b> 與 <b>run-to-run variance</b>，並以最佳個體為觀察焦點。</p>
+        </div>
+        <div class="badge">A｜簡潔專業風</div>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="left-col">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>參數設定</h2>
+          </div>
+          <p class="panel-desc">左側控制參數、seed 與 fitness pattern；右側比較六種 selection methods 的機率分布與 variance。</p>
+
+          <div class="controls">
+            <div class="control">
+              <label for="popSize">Population size N</label>
+              <input id="popSize" type="number" min="4" max="100" step="1" value="20" />
+            </div>
+
+            <div class="control">
+              <label for="seed">Random seed</label>
+              <input id="seed" type="number" step="1" value="0" />
+            </div>
+
+            <div class="control">
+              <label for="fitnessMode">Fitness pattern</label>
+              <select id="fitnessMode">
+                <option value="random" selected>Uniform Random</option>
+                <option value="one_dominant">One Dominant</option>
+                <option value="two_elites">Two Elites</option>
+                <option value="linear_gradient">Linear Gradient</option>
+                <option value="flat_equal">Flat Equal</option>
+                <option value="flat_near_equal">Flat Near Equal</option>
+                <option value="clustered">Clustered</option>
+              </select>
+              <div class="note">控制 population fitness 的結構；產生後會依 fitness 由小到大排序，方便對照各種 patterns。</div>
+            </div>
+
+            <div class="control">
+              <label for="runs">Runs</label>
+              <input id="runs" type="number" min="10" max="10000" step="10" value="1000" />
+            </div>
+
+            <div class="control">
+              <label for="perRun">Selections per run</label>
+              <input id="perRun" type="number" min="1" max="1000" step="1" value="20" />
+            </div>
+
+            <div class="control">
+              <label for="alpha">Linear ranking α</label>
+              <div class="range-row">
+                <input id="alpha" type="range" min="0" max="1" step="0.01" value="0.50" />
+                <div class="range-value" id="alphaVal">0.50</div>
+              </div>
+              <div class="note">β = 2 - α</div>
+            </div>
+
+            <div class="control">
+              <label for="expBeta">Exponential ranking β</label>
+              <div class="range-row">
+                <input id="expBeta" type="range" min="0.01" max="1.5" step="0.01" value="0.40" />
+                <div class="range-value" id="expBetaVal">0.40</div>
+              </div>
+            </div>
+
+            <div class="control">
+              <label for="sigmaC">Sigma scaling c</label>
+              <div class="range-row">
+                <input id="sigmaC" type="range" min="0.10" max="4.00" step="0.05" value="2.00" />
+                <div class="range-value" id="sigmaCVal">2.00</div>
+              </div>
+            </div>
+
+            <div class="control">
+              <label for="tourK">Tournament size k</label>
+              <div class="range-row">
+                <input id="tourK" type="range" min="2" max="10" step="1" value="3" />
+                <div class="range-value" id="tourKVal">3</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button id="regenBtn">重新產生 population</button>
+            <button id="runAllBtn">更新全部圖表</button>
+            <button id="reshuffleBtn" class="secondary">同參數換一組新 seed</button>
+          </div>
+
+          <details>
+            <summary>顯示公式與說明</summary>
+            <div class="formula-note">
+              Roulette wheel: \( p_i = f_i / \sum_j f_j \)<br>
+              Windowing: \( f'_i = f_i - f_{min} \)，再正規化。<br>
+              Sigma scaling: \( f'_i = \max(f_i - (\bar f - c\sigma), 0) \)，再正規化。<br>
+              Linear ranking: \( P(i)=\frac{\alpha}{N}+\frac{(\beta-\alpha)}{N}\cdot\frac{rank(i)}{N-1},\; \beta=2-\alpha \)，rank 由 worst=0 到 best=N-1。<br>
+              Exponential ranking: \( P(i) \propto e^{\beta\, rank(i)} \)，rank 由 worst=0 到 best=N-1。<br>
+              Tournament (with replacement): 每次隨機抽 k 個，選其中 fitness 最佳者。<br>
+              Variance 實驗：每個 run 進行「Selections per run」次 selection，記錄最佳個體被選中的次數，重複 many runs 後畫直方圖。
+            </div>
+          </details>
+        </div>
+
+        <div class="panel soft">
+          <div class="panel-head">
+            <h2>Population Fitness</h2>
+            <span class="best-pill" id="bestBadge">Best: --</span>
+          </div>
+          <div class="chart-wrap fitness">
+            <canvas id="fitnessChart"></canvas>
+          </div>
+          <div class="mini-stats" id="popStats"></div>
+        </div>
+      </div>
+
+      <div class="right-col">
+        <div class="panel">
+          <h2>Selection Probability</h2>
+          <div class="section-hint">同一個 population 下，六種方法對每個 individual 的 selection probability。紅色柱狀代表最佳個體。</div>
+          <div class="chart-grid" id="probGrid"></div>
+        </div>
+
+        <div class="panel">
+          <h2>Variance of Best Individual Count</h2>
+          <div class="section-hint">每一張圖的 x 軸代表：在一個 run 中，最佳個體被選中的次數。分布越寬，代表 run-to-run 波動通常越大。</div>
+          <div class="chart-grid" id="varGrid"></div>
+        </div>
+
+        <div class="panel">
+          <h2>Summary Table</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Method</th>
+                  <th>Best Prob.</th>
+                  <th>Expected Best Count</th>
+                  <th>Empirical Mean</th>
+                  <th>Empirical Variance</th>
+                  <th>Empirical Std</th>
+                </tr>
+              </thead>
+              <tbody id="summaryBody"></tbody>
+            </table>
+          </div>
+          <div class="footer-note">Expected Best Count = (selection probability of best individual) × (selections per run).</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const methods = [
+      { key: 'roulette', name: 'Roulette Wheel', sub: 'fitness-proportionate' },
+      { key: 'windowing', name: 'Windowing Scaling', sub: 'roulette with min-shift' },
+      { key: 'sigma', name: 'Sigma Scaling', sub: 'roulette with σ-based scaling' },
+      { key: 'linear', name: 'Linear Ranking', sub: 'rank-based linear pressure' },
+      { key: 'exp', name: 'Exponential Ranking', sub: 'rank-based exponential pressure' },
+      { key: 'tournament', name: 'Tournament Selection', sub: 'k-way winner-takes-one' },
+    ];
+
+    const chartStore = {
+      fitness: null,
+      prob: {},
+      variance: {}
+    };
+
+    const els = {
+      popSize: document.getElementById('popSize'),
+      seed: document.getElementById('seed'),
+      fitnessMode: document.getElementById('fitnessMode'),
+      runs: document.getElementById('runs'),
+      perRun: document.getElementById('perRun'),
+      alpha: document.getElementById('alpha'),
+      expBeta: document.getElementById('expBeta'),
+      sigmaC: document.getElementById('sigmaC'),
+      tourK: document.getElementById('tourK'),
+      alphaVal: document.getElementById('alphaVal'),
+      expBetaVal: document.getElementById('expBetaVal'),
+      sigmaCVal: document.getElementById('sigmaCVal'),
+      tourKVal: document.getElementById('tourKVal'),
+      probGrid: document.getElementById('probGrid'),
+      varGrid: document.getElementById('varGrid'),
+      popStats: document.getElementById('popStats'),
+      summaryBody: document.getElementById('summaryBody'),
+      regenBtn: document.getElementById('regenBtn'),
+      runAllBtn: document.getElementById('runAllBtn'),
+      reshuffleBtn: document.getElementById('reshuffleBtn'),
+      bestBadge: document.getElementById('bestBadge'),
+    };
+
+    function mulberry32(a) {
+      return function() {
+        let t = a += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+
+    function sum(arr) { return arr.reduce((a, b) => a + b, 0); }
+    function mean(arr) { return sum(arr) / arr.length; }
+    function variance(arr) {
+      const m = mean(arr);
+      return arr.reduce((acc, x) => acc + (x - m) * (x - m), 0) / arr.length;
+    }
+    function std(arr) { return Math.sqrt(variance(arr)); }
+    function normalize(arr) {
+      const s = sum(arr);
+      if (s <= 0 || !isFinite(s)) return Array(arr.length).fill(1 / arr.length);
+      return arr.map(v => v / s);
+    }
+
+    function sampleIndexFromProbs(probs, rng) {
+      const r = rng();
+      let cum = 0;
+      for (let i = 0; i < probs.length; i++) {
+        cum += probs[i];
+        if (r <= cum) return i;
+      }
+      return probs.length - 1;
+    }
+
+    function getRankInfo(fitness) {
+      const N = fitness.length;
+      const idx = [...Array(N).keys()];
+      idx.sort((a, b) => fitness[a] - fitness[b]); // worst -> best
+      const rankWorstToBest = Array(N).fill(0);
+      idx.forEach((id, pos) => rankWorstToBest[id] = pos);
+      const bestIndex = idx[N - 1];
+      return { rankWorstToBest, bestIndex, worstIndex: idx[0], sortedIdx: idx };
+    }
+
+    function shuffleInPlace(arr, rng) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function generatePopulation(N, seed, mode) {
+      const rng = mulberry32(seed >>> 0);
+
+      if (mode === 'flat_equal') {
+        return Array.from({ length: N }, () => 50.0);
+      }
+
+      if (mode === 'flat_near_equal') {
+        return Array.from({ length: N }, () => Number((49.5 + rng()).toFixed(3)));
+      }
+
+      if (mode === 'linear_gradient') {
+        return Array.from({ length: N }, (_, i) => Number((10 + (90 * i / Math.max(1, N - 1))).toFixed(3)));
+      }
+
+      if (mode === 'one_dominant') {
+        const arr = Array.from({ length: N }, () => Number((20 + 8 * rng()).toFixed(3)));
+        const idx = Math.floor(rng() * N);
+        arr[idx] = Number((140 + 20 * rng()).toFixed(3));
+        return arr;
+      }
+
+      if (mode === 'two_elites') {
+        const arr = Array.from({ length: N }, () => Number((20 + 8 * rng()).toFixed(3)));
+        let i1 = Math.floor(rng() * N);
+        let i2 = Math.floor(rng() * N);
+        while (i2 === i1) i2 = Math.floor(rng() * N);
+        arr[i1] = Number((125 + 15 * rng()).toFixed(3));
+        arr[i2] = Number((105 + 12 * rng()).toFixed(3));
+        return arr;
+      }
+
+      if (mode === 'clustered') {
+        const arr = [];
+        const n1 = Math.floor(N / 3);
+        const n2 = Math.floor(N / 3);
+        const n3 = N - n1 - n2;
+        for (let i = 0; i < n1; i++) arr.push(Number((16 + 4 * rng()).toFixed(3)));
+        for (let i = 0; i < n2; i++) arr.push(Number((48 + 5 * rng()).toFixed(3)));
+        for (let i = 0; i < n3; i++) arr.push(Number((88 + 6 * rng()).toFixed(3)));
+        return shuffleInPlace(arr, rng);
+      }
+
+      // default: uniform random
+      return Array.from({ length: N }, () => {
+        const base = 5 + 95 * rng();
+        const tweak = 8 * rng();
+        return Number((base + tweak).toFixed(3));
+      });
+    }
+
+    function probsRoulette(fitness) {
+      return normalize(fitness.slice());
+    }
+
+    function probsWindowing(fitness) {
+      const minFit = Math.min(...fitness);
+      const scaled = fitness.map(f => f - minFit);
+      return normalize(scaled);
+    }
+
+    function probsSigma(fitness, c) {
+      const m = mean(fitness);
+      const s = std(fitness);
+      const threshold = m - c * s;
+      const scaled = fitness.map(f => Math.max(f - threshold, 0));
+      return normalize(scaled);
+    }
+
+    function probsLinearRanking(fitness, alpha) {
+      const N = fitness.length;
+      const beta = 2 - alpha;
+      const { rankWorstToBest } = getRankInfo(fitness);
+      const probs = rankWorstToBest.map(rank => (
+        (alpha / N) + ((beta - alpha) / N) * (rank / Math.max(1, N - 1))
+      ));
+      return normalize(probs);
+    }
+
+    function probsExpRanking(fitness, beta) {
+      const { rankWorstToBest } = getRankInfo(fitness);
+      const raw = rankWorstToBest.map(rank => Math.exp(beta * rank));
+      return normalize(raw);
+    }
+
+    function probsTournamentExact(fitness, k) {
+      const N = fitness.length;
+      const { rankWorstToBest } = getRankInfo(fitness);
+      const probs = rankWorstToBest.map(rank => {
+        const a = Math.pow((rank + 1) / N, k);
+        const b = rank === 0 ? 0 : Math.pow(rank / N, k);
+        return a - b;
+      });
+      return normalize(probs);
+    }
+
+    function runBestCountVarianceByProbs(probs, bestIndex, selectionsPerRun, runs, baseSeed) {
+      const counts = [];
+      for (let r = 0; r < runs; r++) {
+        const rng = mulberry32((baseSeed + 10007 * (r + 1)) >>> 0);
+        let c = 0;
+        for (let t = 0; t < selectionsPerRun; t++) {
+          if (sampleIndexFromProbs(probs, rng) === bestIndex) c++;
+        }
+        counts.push(c);
+      }
+      return counts;
+    }
+
+    function runBestCountVarianceTournament(fitness, k, bestIndex, selectionsPerRun, runs, baseSeed) {
+      const N = fitness.length;
+      const counts = [];
+      for (let r = 0; r < runs; r++) {
+        const rng = mulberry32((baseSeed + 20011 * (r + 1)) >>> 0);
+        let c = 0;
+        for (let t = 0; t < selectionsPerRun; t++) {
+          let best = -1;
+          let bestFit = -Infinity;
+          for (let j = 0; j < k; j++) {
+            const idx = Math.floor(rng() * N);
+            if (fitness[idx] > bestFit) {
+              bestFit = fitness[idx];
+              best = idx;
+            }
+          }
+          if (best === bestIndex) c++;
+        }
+        counts.push(c);
+      }
+      return counts;
+    }
+
+    function histogramCounts(values, maxX) {
+      const bins = Array(maxX + 1).fill(0);
+      for (const v of values) bins[v]++;
+      return bins;
+    }
+
+    function destroyChart(chart) {
+      if (chart) chart.destroy();
+    }
+
+    function makeCanvasCard(parent, title, subtitle, idPrefix, kind) {
+      const card = document.createElement('div');
+      card.className = 'chart-card';
+
+      const titleEl = document.createElement('div');
+      titleEl.className = 'chart-title';
+      titleEl.textContent = title;
+
+      const subEl = document.createElement('div');
+      subEl.className = 'chart-subtitle';
+      subEl.textContent = subtitle;
+
+      const wrap = document.createElement('div');
+      wrap.className = 'chart-wrap';
+
+      const canvas = document.createElement('canvas');
+      canvas.id = `${kind}-${idPrefix}`;
+
+      wrap.appendChild(canvas);
+      card.appendChild(titleEl);
+      card.appendChild(subEl);
+      card.appendChild(wrap);
+      parent.appendChild(card);
+      return canvas;
+    }
+
+    function getBarColors(N, bestIndex, colorNormal='rgba(37, 99, 235, 0.75)', colorBest='rgba(239, 68, 68, 0.85)') {
+      return Array.from({ length: N }, (_, i) => i === bestIndex ? colorBest : colorNormal);
+    }
+
+    function commonBarOptions(yTitle, probabilityMode, xTitle = 'Individual Index') {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => probabilityMode
+                ? `Prob = ${ctx.raw.toFixed(4)}`
+                : `${yTitle} = ${Number(ctx.raw).toFixed(4)}`
+            }
+          }
+        },
+        scales: {
+          x: {
+            title: { display: true, text: xTitle },
+            grid: { display: false }
+          },
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: yTitle }
+          }
+        }
+      };
+    }
+
+    function createOrUpdateFitnessChart(fitness, bestIndex) {
+      const ctx = document.getElementById('fitnessChart');
+      destroyChart(chartStore.fitness);
+      chartStore.fitness = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: fitness.map((_, i) => `I${i}`),
+          datasets: [{
+            label: 'Fitness',
+            data: fitness,
+            backgroundColor: getBarColors(fitness.length, bestIndex),
+            borderWidth: 1
+          }]
+        },
+        options: {
+          ...commonBarOptions('Fitness', false),
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const i = ctx.dataIndex;
+                  const tags = [ `Fitness = ${Number(ctx.raw).toFixed(3)}` ];
+                  if (i === bestIndex) tags.push('Best individual');
+                  return tags;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function createOrUpdateProbChart(key, title, subtitle, probs, fitness, bestIndex) {
+      const canvasId = `prob-${key}`;
+      let ctx = document.getElementById(canvasId);
+      if (!ctx) ctx = makeCanvasCard(els.probGrid, title, subtitle, key, 'prob');
+      destroyChart(chartStore.prob[key]);
+      chartStore.prob[key] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: probs.map((_, i) => `I${i}`),
+          datasets: [{
+            data: probs,
+            backgroundColor: getBarColors(probs.length, bestIndex),
+            borderWidth: 1
+          }]
+        },
+        options: {
+          ...commonBarOptions('Selection Probability', true),
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const i = ctx.dataIndex;
+                  const tags = [`Prob = ${ctx.raw.toFixed(4)}`, `Fitness = ${fitness[i].toFixed(3)}`];
+                  if (i === bestIndex) tags.push('Best individual');
+                  return tags;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function createOrUpdateVarChart(key, title, subtitle, counts, selectionsPerRun) {
+      const canvasId = `var-${key}`;
+      let ctx = document.getElementById(canvasId);
+      if (!ctx) ctx = makeCanvasCard(els.varGrid, title, subtitle, key, 'var');
+      destroyChart(chartStore.variance[key]);
+      const hist = histogramCounts(counts, selectionsPerRun);
+      chartStore.variance[key] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: hist.map((_, i) => i),
+          datasets: [{
+            data: hist,
+            backgroundColor: 'rgba(16, 185, 129, 0.75)',
+            borderWidth: 1
+          }]
+        },
+        options: commonBarOptions('Frequency', false, 'Best Individual Selected Count')
+      });
+    }
+
+    function renderPopulationStats(fitness, bestIndex, worstIndex) {
+      const m = mean(fitness);
+      const s = std(fitness);
+      const best = fitness[bestIndex];
+      const worst = fitness[worstIndex];
+      const total = sum(fitness);
+      const stats = [
+        ['Best index', `I${bestIndex}`],
+        ['Best fitness', best.toFixed(3)],
+        ['Worst index', `I${worstIndex}`],
+        ['Worst fitness', worst.toFixed(3)],
+        ['Mean fitness', m.toFixed(3)],
+        ['Std fitness', s.toFixed(3)],
+        ['Total fitness', total.toFixed(3)],
+        ['Fitness range', (best - worst).toFixed(3)],
+      ];
+      els.popStats.innerHTML = stats.map(([k, v]) => `
+        <div class="stat">
+          <div class="k">${k}</div>
+          <div class="v">${v}</div>
+        </div>
+      `).join('');
+      els.bestBadge.textContent = `Best: I${bestIndex}`;
+    }
+
+    function renderSummary(summaryRows) {
+      els.summaryBody.innerHTML = summaryRows.map(row => `
+        <tr>
+          <td>${row.name}</td>
+          <td>${row.bestProb.toFixed(4)}</td>
+          <td>${row.expected.toFixed(3)}</td>
+          <td>${row.empMean.toFixed(3)}</td>
+          <td>${row.empVar.toFixed(3)}</td>
+          <td>${row.empStd.toFixed(3)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function getInputs() {
+      const N = Math.max(4, Math.min(100, parseInt(els.popSize.value, 10) || 20));
+      const seed = parseInt(els.seed.value, 10) || 0;
+      const fitnessMode = els.fitnessMode.value;
+      const runs = Math.max(10, parseInt(els.runs.value, 10) || 1000);
+      const perRun = Math.max(1, parseInt(els.perRun.value, 10) || N);
+      const alpha = parseFloat(els.alpha.value);
+      const expBeta = parseFloat(els.expBeta.value);
+      const sigmaC = parseFloat(els.sigmaC.value);
+      const tourK = Math.min(N, Math.max(2, parseInt(els.tourK.value, 10) || 3));
+      return { N, seed, fitnessMode, runs, perRun, alpha, expBeta, sigmaC, tourK };
+    }
+
+    function updateRangeLabels() {
+      els.alphaVal.textContent = Number(els.alpha.value).toFixed(2);
+      els.expBetaVal.textContent = Number(els.expBeta.value).toFixed(2);
+      els.sigmaCVal.textContent = Number(els.sigmaC.value).toFixed(2);
+      els.tourKVal.textContent = String(parseInt(els.tourK.value, 10));
+    }
+
+    let currentFitness = [];
+
+    function ensureContainers() {
+      if (!els.probGrid.children.length) {
+        methods.forEach(m => makeCanvasCard(els.probGrid, m.name, m.sub, m.key, 'prob'));
+      }
+      if (!els.varGrid.children.length) {
+        methods.forEach(m => makeCanvasCard(els.varGrid, m.name, m.sub, m.key, 'var'));
+      }
+    }
+
+    function updateAll(regeneratePopulation = false) {
+      updateRangeLabels();
+      ensureContainers();
+      const { N, seed, fitnessMode, runs, perRun, alpha, expBeta, sigmaC, tourK } = getInputs();
+      els.perRun.value = perRun;
+      els.popSize.value = N;
+      if (parseInt(els.tourK.value, 10) > N) {
+        els.tourK.value = N;
+        els.tourKVal.textContent = String(N);
+      }
+
+      if (regeneratePopulation || currentFitness.length !== N) {
+        currentFitness = generatePopulation(N, seed, fitnessMode);
+        currentFitness.sort((a, b) => a - b);
+      }
+
+      const { bestIndex, worstIndex } = getRankInfo(currentFitness);
+      createOrUpdateFitnessChart(currentFitness, bestIndex);
+      renderPopulationStats(currentFitness, bestIndex, worstIndex);
+
+      const probs = {
+        roulette: probsRoulette(currentFitness),
+        windowing: probsWindowing(currentFitness),
+        sigma: probsSigma(currentFitness, sigmaC),
+        linear: probsLinearRanking(currentFitness, alpha),
+        exp: probsExpRanking(currentFitness, expBeta),
+        tournament: probsTournamentExact(currentFitness, tourK),
+      };
+
+      methods.forEach(m => {
+        createOrUpdateProbChart(m.key, m.name, m.sub, probs[m.key], currentFitness, bestIndex);
+      });
+
+      const countsMap = {
+        roulette: runBestCountVarianceByProbs(probs.roulette, bestIndex, perRun, runs, seed + 101),
+        windowing: runBestCountVarianceByProbs(probs.windowing, bestIndex, perRun, runs, seed + 211),
+        sigma: runBestCountVarianceByProbs(probs.sigma, bestIndex, perRun, runs, seed + 307),
+        linear: runBestCountVarianceByProbs(probs.linear, bestIndex, perRun, runs, seed + 401),
+        exp: runBestCountVarianceByProbs(probs.exp, bestIndex, perRun, runs, seed + 503),
+        tournament: runBestCountVarianceTournament(currentFitness, tourK, bestIndex, perRun, runs, seed + 601),
+      };
+
+      methods.forEach(m => {
+        createOrUpdateVarChart(m.key, m.name, m.sub, countsMap[m.key], perRun);
+      });
+
+      const summaryRows = methods.map(m => {
+        const counts = countsMap[m.key];
+        const empMean = mean(counts);
+        const empVar = variance(counts);
+        return {
+          name: m.name,
+          bestProb: probs[m.key][bestIndex],
+          expected: probs[m.key][bestIndex] * perRun,
+          empMean,
+          empVar,
+          empStd: Math.sqrt(empVar),
+        };
+      });
+      renderSummary(summaryRows);
+    }
+
+    els.regenBtn.addEventListener('click', () => updateAll(true));
+    els.runAllBtn.addEventListener('click', () => updateAll(false));
+    els.reshuffleBtn.addEventListener('click', () => {
+      els.seed.value = String((parseInt(els.seed.value, 10) || 0) + 1);
+      updateAll(true);
+    });
+
+    [els.alpha, els.expBeta, els.sigmaC, els.tourK].forEach(el => {
+      el.addEventListener('input', updateRangeLabels);
+      el.addEventListener('change', () => updateAll(false));
+    });
+
+    [els.popSize, els.seed, els.fitnessMode, els.runs, els.perRun].forEach(el => {
+      el.addEventListener('change', () => updateAll(
+        el === els.popSize || el === els.seed || el === els.fitnessMode
+      ));
+    });
+
+    updateAll(true);
+  </script>
+</body>
+</html>
