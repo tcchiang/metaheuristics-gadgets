@@ -1,0 +1,1175 @@
+
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>排列型 Crossover 互動式教學</title>
+<style>
+  :root{
+    --bg:#f6f8fb;
+    --panel:#ffffff;
+    --border:#d8e0ea;
+    --text:#1f2d3d;
+    --muted:#5f6b7a;
+    --accent:#2b6cb0;
+    --accent2:#3182ce;
+    --good:#2f855a;
+    --warn:#d69e2e;
+    --bad:#c53030;
+    --seg:#d6eaff;
+    --current:#fff0b8;
+    --filled:#d9f5df;
+    --conflict:#ffd7d7;
+    --empty:#eef2f7;
+    --cycle1:#d6eaff;
+    --cycle2:#fde2e4;
+    --cycle3:#e4f9e0;
+    --cycle4:#efe3ff;
+    --edge:#fff6d8;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family: "Segoe UI","Noto Sans TC","Microsoft JhengHei",sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.5;
+  }
+  .wrap{
+    max-width: 1450px;
+    margin: 0 auto;
+    padding: 18px;
+  }
+  h1{
+    margin:0 0 8px 0;
+    font-size: 30px;
+  }
+  .subtitle{
+    color:var(--muted);
+    margin-bottom:16px;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns: 430px 1fr;
+    gap:16px;
+  }
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:14px 16px;
+    box-shadow:0 6px 16px rgba(20,40,70,0.05);
+  }
+  .controls .row{
+    display:grid;
+    grid-template-columns: 130px 1fr;
+    gap:10px;
+    align-items:center;
+    margin-bottom:10px;
+  }
+  .controls .row.inline2{
+    grid-template-columns: 130px 1fr 1fr;
+  }
+  label{
+    font-weight:600;
+  }
+  input, select, button, textarea{
+    font:inherit;
+  }
+  input[type="text"], input[type="number"], select, textarea{
+    width:100%;
+    padding:9px 10px;
+    border:1px solid #cbd5e1;
+    border-radius:10px;
+    background:#fff;
+  }
+  button{
+    border:none;
+    border-radius:10px;
+    padding:10px 12px;
+    cursor:pointer;
+    transition:.15s ease;
+    font-weight:600;
+    background:#2563eb;
+    color:#fff;
+  }
+  button:hover{filter:brightness(0.97)}
+  button.primary{background:#2563eb; color:#fff}
+  button.primary:hover{background:#1d4ed8}
+  button.secondary{background:#e2e8f0; color:#1f2937}
+  button.secondary:hover{background:#cbd5e1}
+  button.play{background:#7c3aed; color:#fff}
+  button.play:hover{background:#6d28d9}
+  button.danger{background:#dc2626; color:#fff}
+  button.danger:hover{background:#b91c1c}
+  button.tool{
+    background:#f8fafc;
+    color:#334155;
+    border:1px solid #d1d9e6;
+  }
+  button.tool:hover{background:#eef2f7}
+  .btns{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap:8px;
+    margin-top:10px;
+  }
+  .btns4{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap:8px;
+    margin-top:10px;
+  }
+  .hint{
+    color:var(--muted);
+    font-size:14px;
+  }
+  .error{
+    color:var(--bad);
+    font-weight:700;
+    white-space:pre-wrap;
+  }
+  .success{
+    color:var(--good);
+    font-weight:700;
+  }
+  .main{
+    display:grid;
+    grid-template-rows:auto auto auto auto;
+    gap:16px;
+  }
+  .banner{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .pill{
+    background:#edf6ff;
+    color:#1d4f91;
+    border:1px solid #cfe5ff;
+    border-radius:999px;
+    padding:6px 12px;
+    font-weight:700;
+  }
+  .chromeline{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:8px;
+  }
+  .legend span{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:4px 8px;
+    border-radius:999px;
+    background:#f8fafc;
+    border:1px solid #e2e8f0;
+    font-size:13px;
+  }
+  .dot{
+    width:14px;height:14px;border-radius:4px;border:1px solid #b8c2cf;
+    display:inline-block;
+  }
+  .rows{
+    display:grid;
+    gap:14px;
+  }
+  .gene-row{
+    display:grid;
+    grid-template-columns: 108px 1fr;
+    gap:10px;
+    align-items:start;
+  }
+  .gene-label{
+    font-weight:700;
+    padding-top:8px;
+  }
+  .gene-track{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .gene{
+    min-width:46px;
+    height:44px;
+    padding:0 8px;
+    border:1px solid #cbd5e1;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:700;
+    background:#fff;
+    position:relative;
+  }
+  .gene small{
+    position:absolute;
+    bottom:2px;
+    right:6px;
+    font-size:10px;
+    color:#667;
+    font-weight:600;
+  }
+  .seg{background:var(--seg)}
+  .current{background:var(--current)}
+  .filled{background:var(--filled)}
+  .conflict{background:var(--conflict)}
+  .empty{background:var(--empty); color:#99a3af}
+  .edge{background:var(--edge)}
+  .note{
+    background:#f8fbff;
+    border-left:4px solid var(--accent);
+    padding:10px 12px;
+    border-radius:10px;
+  }
+  .stepsBox{
+    min-height:108px;
+  }
+  .twocol{
+    display:grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap:16px;
+  }
+  .aux-grid{
+    display:grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap:12px;
+  }
+  .table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:14px;
+  }
+  .table th,.table td{
+    border:1px solid #d7e0ea;
+    padding:7px 8px;
+    text-align:left;
+    vertical-align:top;
+  }
+  .table th{background:#f8fbff}
+  .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;}
+  .compare-grid{
+    display:grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap:10px;
+  }
+  .compare-card{
+    border:1px solid #d8e0ea;
+    border-radius:12px;
+    padding:10px;
+    background:#fcfdff;
+  }
+  .compare-card h4{
+    margin:0 0 8px 0;
+    font-size:16px;
+  }
+  .chip{
+    display:inline-block;
+    padding:4px 8px;
+    border-radius:999px;
+    background:#edf2f7;
+    margin:2px 3px 2px 0;
+    font-size:13px;
+  }
+  .footer-note{
+    color:#5a6574;
+    font-size:14px;
+  }
+  @media (max-width:1200px){
+    .grid{grid-template-columns: 1fr}
+    .twocol{grid-template-columns: 1fr}
+    .compare-grid{grid-template-columns: repeat(2,1fr)}
+  }
+  @media (max-width:700px){
+    .controls .row, .controls .row.inline2{grid-template-columns: 1fr}
+    .gene-row{grid-template-columns: 1fr}
+    .compare-grid{grid-template-columns: 1fr}
+    .btns, .btns4{grid-template-columns: repeat(2,1fr)}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>排列型 Crossover 互動式教學網頁</h1>
+  <div class="subtitle">中文為主、英文術語輔助。支援 <b>PMX / OX / LOX / CX / ERX</b>，可逐步播放並比較它們保留的資訊。</div>
+
+  <div class="grid">
+    <div class="panel controls">
+      <div class="row">
+        <label for="method">方法</label>
+        <select id="method">
+          <option value="PMX">PMX — 部分映射交配</option>
+          <option value="OX">OX — 順序交配</option>
+          <option value="LOX">LOX — 線性順序交配</option>
+          <option value="CX">CX — 循環交配</option>
+          <option value="ERX">ERX — 邊重組交配</option>
+        </select>
+      </div>
+
+      <div class="row inline2">
+        <label for="length">排列長度</label>
+        <input id="length" type="number" min="4" max="14" value="8" />
+        <button class="tool" id="resizeBtn">套用長度</button>
+      </div>
+
+      <div class="row">
+        <label for="parent1">Parent 1</label>
+        <input id="parent1" type="text" value="1 2 3 4 5 6 7 8" />
+      </div>
+
+      <div class="row">
+        <label for="parent2">Parent 2</label>
+        <input id="parent2" type="text" value="4 1 2 8 7 6 5 3" />
+      </div>
+
+      <div class="row inline2">
+        <label for="cut1">cut point 1</label>
+        <input id="cut1" type="number" min="1" value="3" />
+        <input id="cut2" type="number" min="1" value="6" />
+      </div>
+
+      <div class="hint" id="cutHint">PMX / OX / LOX 需要 cut points；CX 與 ERX 會自動忽略此設定。</div>
+
+      <div class="hint" style="margin-top:12px;font-weight:700;color:#475569">工具與輸入檢查</div>
+      <div class="btns4">
+        <button id="randomParentsBtn" class="tool">隨機 parent</button>
+        <button id="randomCutsBtn" class="tool">隨機 cut</button>
+        <button id="exampleBtn" class="tool">載入範例</button>
+        <button id="validateBtn" class="secondary">檢查輸入</button>
+      </div>
+
+      <div class="hint" style="margin-top:12px;font-weight:700;color:#475569">主要教學流程</div>
+      <div class="btns4">
+        <button id="initBtn" class="primary">初始化</button>
+        <button id="prevBtn" class="secondary">上一步</button>
+        <button id="nextBtn" class="primary">下一步</button>
+        <button id="playBtn" class="play">自動播放</button>
+      </div>
+
+      <div class="hint" style="margin-top:12px;font-weight:700;color:#475569">播放控制與重設</div>
+      <div class="btns">
+        <button id="pauseBtn" class="secondary">暫停</button>
+        <button id="resetBtn" class="danger">重設步驟</button>
+        <button id="compareBtn" class="tool">刷新比較區</button>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="hint">訊息</div>
+        <div id="message" class="hint">請先按「初始化」，再用「下一步」觀察。</div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="panel banner">
+        <div>
+          <div class="pill" id="methodTitle">PMX — 部分映射交配</div>
+          <div class="hint" id="methodSummary">PMX preserves a segment and uses mapping to resolve conflicts.</div>
+        </div>
+        <div class="chromeline">
+          <div class="chip" id="preserveChip">保留資訊：部分位置 + mapping</div>
+          <div class="chip" id="stepChip">目前步驟：0 / 0</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="rows" id="vizArea"></div>
+        <div class="legend">
+          <span><i class="dot" style="background:var(--seg)"></i>保留區段 / 特殊結構</span>
+          <span><i class="dot" style="background:var(--current)"></i>目前處理</span>
+          <span><i class="dot" style="background:var(--filled)"></i>已填入 child</span>
+          <span><i class="dot" style="background:var(--conflict)"></i>衝突 / 跳過</span>
+          <span><i class="dot" style="background:var(--edge)"></i>ERX 候選邊資訊</span>
+        </div>
+      </div>
+
+      <div class="twocol">
+        <div class="panel stepsBox">
+          <h3 style="margin-top:0">步驟解說</h3>
+          <div class="note" id="stepDescription">尚未初始化。</div>
+          <div style="margin-top:10px" class="footer-note" id="methodConcept"></div>
+        </div>
+
+        <div class="panel">
+          <h3 style="margin-top:0">方法專屬輔助區</h3>
+          <div id="auxArea" class="hint">初始化後顯示。</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3 style="margin-top:0">快速比較區（同一組 parent）</h3>
+        <div class="compare-grid" id="compareArea"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const state = {
+    steps: [],
+    stepIndex: 0,
+    timer: null,
+  };
+
+  const methodInfo = {
+    PMX: {
+      title: "PMX — 部分映射交配",
+      summary: "PMX preserves a copied segment and uses mapping to resolve conflicts.",
+      preserve: "保留資訊：部分位置 + mapping",
+      concept: "教學重點：先複製一段 substring，再利用兩個 parent 在該區段內形成的對應關係（mapping）來處理衝突。學生要理解的核心是：PMX 不是單純跳過重複，而是沿著映射鏈找到合法填入值。"
+    },
+    OX: {
+      title: "OX — 順序交配",
+      summary: "OX preserves a segment and fills the rest by cyclic scanning order from the other parent.",
+      preserve: "保留資訊：子序列 + 相對順序",
+      concept: "教學重點：保留一段子序列，然後從另一個 parent 的 cut point 後方開始循環掃描；遇到已存在元素就跳過，否則依序填入 child 空位。關鍵是『循環掃描』與『保相對順序』。"
+    },
+    LOX: {
+      title: "LOX — 線性順序交配",
+      summary: "LOX preserves a segment and fills blanks with the remaining genes in the linear order of the other parent.",
+      preserve: "保留資訊：子序列 + 線性填補順序",
+      concept: "教學重點：也會先複製一段，但接著不是循環掃描，而是把另一個 parent 中未使用的元素抽出，依其原本線性順序填回空格。因此 LOX 很適合拿來和 OX 做對照。"
+    },
+    CX: {
+      title: "CX — 循環交配",
+      summary: "CX identifies position cycles and alternates which parent supplies each cycle.",
+      preserve: "保留資訊：位置 cycle",
+      concept: "教學重點：從位置對應關係找出 cycle，同一個 cycle 中的位置由同一個 parent 提供。學生要看懂的是：它保留的是位置對應結構，而不是單純的局部區段或鄰接關係。"
+    },
+    ERX: {
+      title: "ERX — 邊重組交配",
+      summary: "ERX builds an edge table and chooses next cities by preserving adjacency.",
+      preserve: "保留資訊：鄰接關係 adjacency",
+      concept: "教學重點：ERX 特別適合 TSP，因為它保留的是城市之間的相鄰關係，而不是位置。先建 edge table，再一步步從候選鄰居中挑選下一個城市，常用『鄰居集合最少者優先』。"
+    }
+  };
+
+  function parsePermutation(text) {
+    const arr = text.trim().split(/[\s,]+/).filter(Boolean).map(Number);
+    if (arr.some(v => Number.isNaN(v))) throw new Error("排列中只能有整數。");
+    return arr;
+  }
+
+  function isPermutation(arr, n) {
+    if (arr.length !== n) return false;
+    const sorted = [...arr].sort((a,b)=>a-b);
+    for (let i=0;i<n;i++) if (sorted[i] !== i+1) return false;
+    return true;
+  }
+
+  function randomPermutation(n) {
+    const arr = Array.from({length:n}, (_,i)=>i+1);
+    for (let i=n-1;i>0;i--) {
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]] = [arr[j],arr[i]];
+    }
+    return arr;
+  }
+
+  function randomCuts(n) {
+    let a = Math.floor(Math.random()*n);
+    let b = Math.floor(Math.random()*n);
+    if (a > b) [a,b] = [b,a];
+    if (a === b) b = Math.min(n-1, a+1);
+    return [a,b];
+  }
+
+  function wrapIndex(start, n) {
+    return Array.from({length:n}, (_,k)=>(start+k)%n);
+  }
+
+  function clone(x){ return JSON.parse(JSON.stringify(x)); }
+
+  function makeBaseMeta(n) {
+    return {
+      p1Class: Array(n).fill(""),
+      p2Class: Array(n).fill(""),
+      cClass: Array(n).fill(""),
+      p1Notes: Array(n).fill(""),
+      p2Notes: Array(n).fill(""),
+      cNotes: Array(n).fill("")
+    };
+  }
+
+  function stepFactory(desc, child, extra={}) {
+    return {desc, child:[...child], ...extra};
+  }
+
+  function validateInputs(showMessage=true) {
+    const n = Number($("length").value);
+    try {
+      const p1 = parsePermutation($("parent1").value);
+      const p2 = parsePermutation($("parent2").value);
+      if (!isPermutation(p1, n) || !isPermutation(p2, n)) {
+        throw new Error(`Parent 1 與 Parent 2 都必須是 1 到 ${n} 的合法 permutation，且長度必須等於 ${n}。`);
+      }
+      let c1 = Number($("cut1").value)-1;
+      let c2 = Number($("cut2").value)-1;
+      if (!Number.isInteger(c1) || !Number.isInteger(c2)) throw new Error("cut points 必須是整數。");
+      if (c1 < 0 || c2 < 0 || c1 >= n || c2 >= n) throw new Error(`cut points 必須介於 1 到 ${n}。`);
+      if (c1 > c2) [c1,c2] = [c2,c1];
+      if (showMessage) setMessage("輸入合法，可以初始化。", "success");
+      return {ok:true, n, p1, p2, cut1:c1, cut2:c2};
+    } catch (err) {
+      if (showMessage) setMessage(err.message, "error");
+      return {ok:false, error:err.message};
+    }
+  }
+
+  function setMessage(msg, cls="hint") {
+    const el = $("message");
+    el.className = cls;
+    el.textContent = msg;
+  }
+
+  function initMethodText() {
+    const m = $("method").value;
+    $("methodTitle").textContent = methodInfo[m].title;
+    $("methodSummary").textContent = methodInfo[m].summary;
+    $("preserveChip").textContent = methodInfo[m].preserve;
+    $("methodConcept").textContent = methodInfo[m].concept;
+    $("cutHint").textContent = (m === "CX" || m === "ERX")
+      ? `${m} 不需要 cut points；下方仍保留數值，但初始化時會自動忽略。`
+      : `${m} 需要 cut points；若 cut1 > cut2，系統會自動交換。`;
+  }
+
+  function buildPMX(p1, p2, a, b) {
+    const n = p1.length;
+    const child = Array(n).fill(null);
+    const steps = [];
+    let meta = makeBaseMeta(n);
+
+    for (let i=a;i<=b;i++) {
+      child[i] = p1[i];
+      meta.p1Class[i] = "seg";
+      meta.cClass[i] = "seg filled";
+      meta.cNotes[i] = "copy";
+    }
+    steps.push(stepFactory(`先把 Parent 1 的區段 [${a+1}, ${b+1}] 複製到 Child。`, child, {
+      meta: clone(meta),
+      aux: {type:"pmx", mapping: [], trace: []}
+    }));
+
+    const segmentP1 = p1.slice(a,b+1);
+    const segmentP2 = p2.slice(a,b+1);
+    const mapP1toP2 = new Map();
+    for (let i=a;i<=b;i++) mapP1toP2.set(p1[i], p2[i]);
+
+    for (let i=0;i<n;i++) {
+      if (i>=a && i<=b) continue;
+      let gene = p2[i];
+      const trace = [gene];
+      meta = makeBaseMeta(n);
+      for (let k=a;k<=b;k++) {
+        meta.p1Class[k] = "seg";
+        meta.cClass[k] = child[k] != null ? "seg filled" : "seg";
+      }
+      meta.p2Class[i] = "current";
+      if (!segmentP1.includes(gene)) {
+        child[i] = gene;
+        meta.cClass[i] = "filled current";
+        meta.cNotes[i] = "direct";
+        steps.push(stepFactory(`位置 ${i+1}：Parent 2 的 ${gene} 不在複製區段內，可直接填入 Child。`, child, {
+          meta: clone(meta),
+          aux: {type:"pmx", mapping: segmentP1.map((v,idx)=>[v,segmentP2[idx]]), trace}
+        }));
+      } else {
+        meta.cClass[i] = "conflict";
+        steps.push(stepFactory(`位置 ${i+1}：Parent 2 的 ${gene} 與複製區段衝突，必須沿 mapping 尋找替代值。`, child, {
+          meta: clone(meta),
+          aux: {type:"pmx", mapping: segmentP1.map((v,idx)=>[v,segmentP2[idx]]), trace}
+        }));
+        while (segmentP1.includes(gene)) {
+          gene = mapP1toP2.get(gene);
+          trace.push(gene);
+          meta = makeBaseMeta(n);
+          for (let k=a;k<=b;k++) {
+            meta.p1Class[k] = "seg";
+            meta.cClass[k] = child[k] != null ? "seg filled" : "seg";
+          }
+          meta.p2Class[i] = "current";
+          meta.cClass[i] = "current";
+          steps.push(stepFactory(`沿 mapping 追蹤：${trace.slice(-2)[0]} → ${gene}。`, child, {
+            meta: clone(meta),
+            aux: {type:"pmx", mapping: segmentP1.map((v,idx)=>[v,segmentP2[idx]]), trace:[...trace]}
+          }));
+        }
+        child[i] = gene;
+        meta.cClass[i] = "filled current";
+        meta.cNotes[i] = "mapped";
+        steps.push(stepFactory(`位置 ${i+1} 最終可填入 ${gene}。`, child, {
+          meta: clone(meta),
+          aux: {type:"pmx", mapping: segmentP1.map((v,idx)=>[v,segmentP2[idx]]), trace:[...trace]}
+        }));
+      }
+    }
+    steps.push(stepFactory("PMX 完成：Child 已建立完成。", child, {
+      meta: clone(makeBaseMeta(n)),
+      aux: {type:"pmx", mapping: segmentP1.map((v,idx)=>[v,segmentP2[idx]]), trace: []}
+    }));
+    return steps;
+  }
+
+  function buildOX(p1, p2, a, b) {
+    const n = p1.length;
+    const child = Array(n).fill(null);
+    const steps = [];
+    let meta = makeBaseMeta(n);
+
+    const used = new Set();
+    for (let i=a;i<=b;i++) {
+      child[i] = p1[i];
+      used.add(p1[i]);
+      meta.p1Class[i] = "seg";
+      meta.cClass[i] = "seg filled";
+      meta.cNotes[i] = "copy";
+    }
+    steps.push(stepFactory(`先把 Parent 1 的區段 [${a+1}, ${b+1}] 複製到 Child。`, child, {
+      meta: clone(meta),
+      aux: {type:"ox", order: wrapIndex(b+1, n), scanned: [], accepted: []}
+    }));
+
+    const scanOrder = wrapIndex(b+1, n);
+    const emptyOrder = wrapIndex(b+1, n).filter(i => child[i] == null);
+    let fillPtr = 0;
+    const scanned = [], accepted = [];
+
+    for (const idx of scanOrder) {
+      const gene = p2[idx];
+      scanned.push(gene);
+      meta = makeBaseMeta(n);
+      for (let k=a;k<=b;k++) {
+        meta.p1Class[k] = "seg";
+        meta.cClass[k] = child[k] != null ? "seg filled" : "seg";
+      }
+      meta.p2Class[idx] = "current";
+      if (used.has(gene)) {
+        meta.p2Class[idx] = "conflict";
+        steps.push(stepFactory(`循環掃描 Parent 2：看到 ${gene}，但它已存在於 Child，跳過。`, child, {
+          meta: clone(meta),
+          aux: {type:"ox", order: scanOrder, scanned:[...scanned], accepted:[...accepted], nextEmpty: emptyOrder[fillPtr]}
+        }));
+      } else {
+        const pos = emptyOrder[fillPtr++];
+        child[pos] = gene;
+        used.add(gene);
+        accepted.push(gene);
+        meta.cClass[pos] = "filled current";
+        meta.cNotes[pos] = "fill";
+        steps.push(stepFactory(`循環掃描 Parent 2：接受 ${gene}，填入 Child 的下一個空位（位置 ${pos+1}）。`, child, {
+          meta: clone(meta),
+          aux: {type:"ox", order: scanOrder, scanned:[...scanned], accepted:[...accepted], nextEmpty: emptyOrder[fillPtr]}
+        }));
+      }
+    }
+    steps.push(stepFactory("OX 完成：Child 已依循環掃描順序建立。", child, {
+      meta: clone(makeBaseMeta(n)),
+      aux: {type:"ox", order: scanOrder, scanned:[...scanned], accepted:[...accepted]}
+    }));
+    return steps;
+  }
+
+  function buildLOX(p1, p2, a, b) {
+    const n = p1.length;
+    const child = Array(n).fill(null);
+    const steps = [];
+    let meta = makeBaseMeta(n);
+
+    const used = new Set();
+    for (let i=a;i<=b;i++) {
+      child[i] = p1[i];
+      used.add(p1[i]);
+      meta.p1Class[i] = "seg";
+      meta.cClass[i] = "seg filled";
+      meta.cNotes[i] = "copy";
+    }
+    steps.push(stepFactory(`先把 Parent 1 的區段 [${a+1}, ${b+1}] 複製到 Child。`, child, {
+      meta: clone(meta),
+      aux: {type:"lox", filtered: [], fillOrder: []}
+    }));
+
+    const filtered = [];
+    for (let i=0;i<n;i++) {
+      meta = makeBaseMeta(n);
+      for (let k=a;k<=b;k++) {
+        meta.p1Class[k] = "seg";
+        meta.cClass[k] = child[k] != null ? "seg filled" : "seg";
+      }
+      meta.p2Class[i] = "current";
+      const gene = p2[i];
+      if (!used.has(gene)) {
+        filtered.push(gene);
+        steps.push(stepFactory(`檢視 Parent 2 的 ${gene}：它尚未出現在 Child，保留到「線性填補序列」。`, child, {
+          meta: clone(meta),
+          aux: {type:"lox", filtered:[...filtered], fillOrder: []}
+        }));
+      } else {
+        meta.p2Class[i] = "conflict";
+        steps.push(stepFactory(`檢視 Parent 2 的 ${gene}：它已在複製區段內，因此從線性填補序列中刪除。`, child, {
+          meta: clone(meta),
+          aux: {type:"lox", filtered:[...filtered], fillOrder: []}
+        }));
+      }
+    }
+
+    const empties = [];
+    for (let i=0;i<n;i++) if (child[i]==null) empties.push(i);
+
+    const fillOrder = [];
+    for (let k=0;k<empties.length;k++) {
+      const pos = empties[k];
+      const gene = filtered[k];
+      child[pos] = gene;
+      fillOrder.push({pos, gene});
+      meta = makeBaseMeta(n);
+      for (let x=a;x<=b;x++) {
+        meta.p1Class[x] = "seg";
+        meta.cClass[x] = "seg filled";
+      }
+      meta.cClass[pos] = "filled current";
+      steps.push(stepFactory(`依 LOX 的線性規則，把 ${gene} 填入下一個空位（位置 ${pos+1}）。`, child, {
+        meta: clone(meta),
+        aux: {type:"lox", filtered:[...filtered], fillOrder:[...fillOrder]}
+      }));
+    }
+
+    steps.push(stepFactory("LOX 完成：Child 已依線性順序填補完成。", child, {
+      meta: clone(makeBaseMeta(n)),
+      aux: {type:"lox", filtered:[...filtered], fillOrder:[...fillOrder]}
+    }));
+    return steps;
+  }
+
+  function buildCX(p1, p2) {
+    const n = p1.length;
+    const child = Array(n).fill(null);
+    const steps = [];
+    const visited = Array(n).fill(false);
+    const cycles = [];
+    const posInP1 = new Map();
+    p1.forEach((v,i)=>posInP1.set(v,i));
+
+    for (let i=0;i<n;i++) {
+      if (visited[i]) continue;
+      let cycle = [];
+      let cur = i;
+      while (!visited[cur]) {
+        visited[cur] = true;
+        cycle.push(cur);
+        cur = posInP1.get(p2[cur]);
+      }
+      cycles.push(cycle);
+    }
+
+    steps.push(stepFactory(`CX 先找出位置 cycles：共 ${cycles.length} 個 cycle。`, child, {
+      meta: clone(makeBaseMeta(n)),
+      aux: {type:"cx", cycles: clone(cycles), currentCycle: -1, source: []}
+    }));
+
+    cycles.forEach((cycle, cycleIdx) => {
+      const fromParent = cycleIdx % 2 === 0 ? "Parent 1" : "Parent 2";
+      const className = ["seg","current","filled","edge"][cycleIdx % 4];
+      cycle.forEach(pos => {
+        child[pos] = cycleIdx % 2 === 0 ? p1[pos] : p2[pos];
+      });
+      const meta = makeBaseMeta(n);
+      cycles.forEach((cy, idx) => {
+        const cls = ["seg","current","filled","edge"][idx % 4];
+        cy.forEach(pos => {
+          meta.p1Class[pos] = cls;
+          meta.p2Class[pos] = cls;
+          if (idx <= cycleIdx) meta.cClass[pos] = cls + " filled";
+        });
+      });
+      steps.push(stepFactory(`處理 cycle ${cycleIdx+1}：這一組位置 ${cycle.map(v=>v+1).join(", ")} 取自 ${fromParent}。`, child, {
+        meta: clone(meta),
+        aux: {type:"cx", cycles: clone(cycles), currentCycle: cycleIdx, source: cycles.map((_,idx)=>idx%2===0?"P1":"P2")}
+      }));
+    });
+
+    steps.push(stepFactory("CX 完成：Child 已由不同 cycle 交替取自兩個 parent。", child, {
+      meta: clone(makeBaseMeta(n)),
+      aux: {type:"cx", cycles: clone(cycles), currentCycle: -1, source: cycles.map((_,idx)=>idx%2===0?"P1":"P2")}
+    }));
+    return steps;
+  }
+
+  function buildERX(p1, p2) {
+    const n = p1.length;
+    const steps = [];
+    const child = [];
+    const adj = new Map();
+
+    function addEdge(map, a, b) {
+      if (!map.has(a)) map.set(a, new Set());
+      map.get(a).add(b);
+    }
+
+    function buildEdges(arr) {
+      for (let i=0;i<n;i++) {
+        const v = arr[i];
+        const left = arr[(i-1+n)%n];
+        const right = arr[(i+1)%n];
+        addEdge(adj, v, left);
+        addEdge(adj, v, right);
+      }
+    }
+    buildEdges(p1); buildEdges(p2);
+
+    steps.push(stepFactory("ERX 先建立 edge table：每個城市記錄在兩個 parent 中相鄰的城市。", Array(n).fill(null), {
+      meta: clone(makeBaseMeta(n)),
+      aux: {type:"erx", adj: serializeAdj(adj), current:null, candidates:[]}
+    }));
+
+    let current = p1[0];
+    const used = new Set([current]);
+    child.push(current);
+    steps.push(stepFactory(`ERX 從 Parent 1 的第一個城市 ${current} 開始建構 Child。`, padChild(child, n), {
+      meta: childMetaFromList(child, n, child.length-1),
+      aux: {type:"erx", adj: serializeAdj(adj), current, candidates:[...adj.get(current)]}
+    }));
+
+    while (child.length < n) {
+      for (const set of adj.values()) set.delete(current);
+      const neighbors = adj.get(current) ? [...adj.get(current)].filter(v=>!used.has(v)) : [];
+      let next = null;
+      let reason = "";
+
+      if (neighbors.length > 0) {
+        let bestSize = Infinity;
+        let best = [];
+        for (const cand of neighbors) {
+          const size = [...(adj.get(cand)||[])].filter(v=>!used.has(v)).length;
+          if (size < bestSize) { bestSize = size; best = [cand]; }
+          else if (size === bestSize) best.push(cand);
+        }
+        next = Math.min(...best);
+        reason = `候選鄰居為 ${neighbors.join(", ")}；選擇鄰居集合最少者，若平手取數值較小者，因此選 ${next}。`;
+      } else {
+        const remain = p1.filter(v=>!used.has(v));
+        next = Math.min(...remain);
+        reason = `目前城市已沒有可用鄰居，改從尚未使用的城市中取最小者 ${next}。`;
+      }
+
+      steps.push(stepFactory(reason, padChild(child, n), {
+        meta: childMetaFromList(child, n, child.length-1),
+        aux: {type:"erx", adj: serializeAdj(adj), current, candidates: neighbors}
+      }));
+
+      current = next;
+      used.add(current);
+      child.push(current);
+      steps.push(stepFactory(`把 ${current} 加入 Child。`, padChild(child, n), {
+        meta: childMetaFromList(child, n, child.length-1),
+        aux: {type:"erx", adj: serializeAdj(adj), current, candidates:[...(adj.get(current)||[])].filter(v=>!used.has(v))}
+      }));
+    }
+
+    steps.push(stepFactory("ERX 完成：Child 以 adjacency 為導向建立完成。", padChild(child, n), {
+      meta: childMetaFromList(child, n, child.length-1),
+      aux: {type:"erx", adj: serializeAdj(adj), current, candidates:[]}
+    }));
+    return steps;
+  }
+
+  function padChild(list, n) {
+    const arr = Array(n).fill(null);
+    list.forEach((v,i)=>arr[i]=v);
+    return arr;
+  }
+
+  function childMetaFromList(list, n, currentIndex) {
+    const meta = makeBaseMeta(n);
+    for (let i=0;i<list.length;i++) meta.cClass[i] = i===currentIndex ? "filled current" : "filled";
+    return meta;
+  }
+
+  function serializeAdj(adj) {
+    return [...adj.entries()].sort((a,b)=>a[0]-b[0]).map(([k,set])=>[k,[...set].sort((a,b)=>a-b)]);
+  }
+
+  function buildSteps() {
+    const v = validateInputs(false);
+    if (!v.ok) {
+      setMessage(v.error, "error");
+      return false;
+    }
+    const {p1,p2,cut1,cut2} = v;
+    const method = $("method").value;
+    let steps = [];
+    if (method === "PMX") steps = buildPMX(p1,p2,cut1,cut2);
+    if (method === "OX") steps = buildOX(p1,p2,cut1,cut2);
+    if (method === "LOX") steps = buildLOX(p1,p2,cut1,cut2);
+    if (method === "CX") steps = buildCX(p1,p2);
+    if (method === "ERX") steps = buildERX(p1,p2);
+    state.steps = steps;
+    state.stepIndex = 0;
+    render();
+    setMessage(`已初始化 ${method}。共有 ${steps.length} 個步驟。`, "success");
+    return true;
+  }
+
+  function renderGeneRow(label, arr, classes=[], notes=[]) {
+    const items = arr.map((v,i)=>{
+      const cls = classes[i] || "";
+      const text = (v===null || v===undefined) ? "·" : v;
+      const note = notes[i] ? `<small>${notes[i]}</small>` : `<small>${i+1}</small>`;
+      return `<div class="gene ${cls}">${text}${note}</div>`;
+    }).join("");
+    return `<div class="gene-row"><div class="gene-label">${label}</div><div class="gene-track">${items}</div></div>`;
+  }
+
+  function renderAux(aux) {
+    if (!aux) return '<div class="hint">無資料。</div>';
+    if (aux.type === "pmx") {
+      const mappingRows = (aux.mapping || []).map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join("");
+      const trace = (aux.trace && aux.trace.length) ? aux.trace.join(" → ") : "尚無";
+      return `
+        <div class="aux-grid">
+          <div>
+            <div class="hint">mapping（Parent 2 區段 → Parent 1 區段）</div>
+            <table class="table"><tr><th>P2</th><th>P1</th></tr>${mappingRows || '<tr><td colspan="2">尚無</td></tr>'}</table>
+          </div>
+          <div>
+            <div class="hint">目前衝突追蹤鏈</div>
+            <div class="note mono">${trace}</div>
+          </div>
+        </div>`;
+    }
+    if (aux.type === "ox") {
+      return `
+        <div class="hint">循環掃描順序（由 cut2 後開始）</div>
+        <div class="note mono">${(aux.order || []).map(v=>v+1).join(" → ")}</div>
+        <div style="margin-top:8px" class="hint">已掃描元素</div>
+        <div class="note mono">${(aux.scanned || []).join(" , ") || "尚無"}</div>
+        <div style="margin-top:8px" class="hint">已接受填入元素</div>
+        <div class="note mono">${(aux.accepted || []).join(" , ") || "尚無"}</div>
+      `;
+    }
+    if (aux.type === "lox") {
+      const fillRows = (aux.fillOrder || []).map(x=>`<tr><td>${x.gene}</td><td>${x.pos+1}</td></tr>`).join("");
+      return `
+        <div class="hint">Parent 2 過濾後的線性序列</div>
+        <div class="note mono">${(aux.filtered || []).join(" , ") || "尚無"}</div>
+        <div style="margin-top:8px" class="hint">已完成的填補紀錄</div>
+        <table class="table"><tr><th>gene</th><th>填入位置</th></tr>${fillRows || '<tr><td colspan="2">尚無</td></tr>'}</table>
+      `;
+    }
+    if (aux.type === "cx") {
+      const rows = (aux.cycles || []).map((cy,idx)=>
+        `<tr><td>cycle ${idx+1}</td><td>${cy.map(v=>v+1).join(", ")}</td><td>${aux.source && aux.source[idx] ? aux.source[idx] : (idx%2===0?"P1":"P2")}</td></tr>`
+      ).join("");
+      return `<table class="table"><tr><th>cycle</th><th>位置</th><th>來源</th></tr>${rows}</table>`;
+    }
+    if (aux.type === "erx") {
+      const rows = (aux.adj || []).map(([k,arr])=>`<tr><td>${k}</td><td>${arr.join(", ") || "—"}</td></tr>`).join("");
+      return `
+        <div class="hint">目前城市</div>
+        <div class="note mono">${aux.current ?? "尚未開始"}</div>
+        <div style="margin-top:8px" class="hint">候選鄰居</div>
+        <div class="note mono">${(aux.candidates || []).join(", ") || "—"}</div>
+        <div style="margin-top:8px" class="hint">edge table</div>
+        <table class="table"><tr><th>城市</th><th>鄰居集合</th></tr>${rows}</table>
+      `;
+    }
+    return '<div class="hint">無資料。</div>';
+  }
+
+  function render() {
+    initMethodText();
+    const v = validateInputs(false);
+    const p1 = v.ok ? v.p1 : [];
+    const p2 = v.ok ? v.p2 : [];
+    const step = state.steps[state.stepIndex];
+    const area = $("vizArea");
+    const auxArea = $("auxArea");
+    const desc = $("stepDescription");
+    const stepChip = $("stepChip");
+
+    if (!step) {
+      area.innerHTML = `
+        ${renderGeneRow("Parent 1", p1)}
+        ${renderGeneRow("Parent 2", p2)}
+        ${renderGeneRow("Child", Array(v.ok ? p1.length : 0).fill(null))}
+      `;
+      auxArea.innerHTML = '<div class="hint">尚未初始化。</div>';
+      desc.textContent = '尚未初始化。';
+      stepChip.textContent = '目前步驟：0 / 0';
+      return;
+    }
+
+    area.innerHTML = `
+      ${renderGeneRow("Parent 1", p1, step.meta?.p1Class || [], step.meta?.p1Notes || [])}
+      ${renderGeneRow("Parent 2", p2, step.meta?.p2Class || [], step.meta?.p2Notes || [])}
+      ${renderGeneRow("Child", step.child, step.meta?.cClass || [], step.meta?.cNotes || [])}
+    `;
+    auxArea.innerHTML = renderAux(step.aux);
+    desc.textContent = step.desc;
+    stepChip.textContent = `目前步驟：${state.stepIndex+1} / ${state.steps.length}`;
+  }
+
+  function finalChildFor(method, p1, p2, a, b) {
+    let steps = [];
+    if (method === "PMX") steps = buildPMX(p1,p2,a,b);
+    if (method === "OX") steps = buildOX(p1,p2,a,b);
+    if (method === "LOX") steps = buildLOX(p1,p2,a,b);
+    if (method === "CX") steps = buildCX(p1,p2);
+    if (method === "ERX") steps = buildERX(p1,p2);
+    return steps.at(-1)?.child || [];
+  }
+
+  function refreshCompare() {
+    const v = validateInputs(false);
+    if (!v.ok) {
+      $("compareArea").innerHTML = `<div class="hint">輸入不合法，無法比較。</div>`;
+      return;
+    }
+    const {p1,p2,cut1,cut2} = v;
+    const methods = ["PMX","OX","LOX","CX","ERX"];
+    const preserve = {
+      PMX:"部分位置 + mapping",
+      OX:"子序列 + 相對順序",
+      LOX:"子序列 + 線性填補",
+      CX:"位置 cycle",
+      ERX:"adjacency"
+    };
+    const explain = {
+      PMX:"適合教衝突解消與映射鏈。",
+      OX:"強調循環掃描與保順序。",
+      LOX:"和 OX 類似，但填補方式是線性的。",
+      CX:"用位置 cycle 決定來源 parent。",
+      ERX:"保留邊，特別適合 TSP。"
+    };
+    $("compareArea").innerHTML = methods.map(m=>{
+      const child = finalChildFor(m,p1,p2,cut1,cut2);
+      return `
+      <div class="compare-card">
+        <h4>${m}</h4>
+        <div class="hint">${preserve[m]}</div>
+        <div style="margin-top:8px">${child.map(v=>`<span class="chip mono">${v ?? "·"}</span>`).join("")}</div>
+        <div class="footer-note" style="margin-top:8px">${explain[m]}</div>
+      </div>`;
+    }).join("");
+  }
+
+  function stopPlay() {
+    if (state.timer) clearInterval(state.timer);
+    state.timer = null;
+  }
+
+  // events
+  $("method").addEventListener("change", ()=>{ initMethodText(); render(); });
+  $("validateBtn").addEventListener("click", ()=>validateInputs(true));
+  $("resizeBtn").addEventListener("click", ()=>{
+    const n = Number($("length").value);
+    if (!Number.isInteger(n) || n < 4 || n > 14) {
+      setMessage("排列長度請設在 4 到 14 之間。", "error");
+      return;
+    }
+    const p1 = Array.from({length:n}, (_,i)=>i+1);
+    const p2 = randomPermutation(n);
+    $("parent1").value = p1.join(" ");
+    $("parent2").value = p2.join(" ");
+    const [a,b] = randomCuts(n);
+    $("cut1").value = a+1;
+    $("cut2").value = b+1;
+    state.steps = []; state.stepIndex = 0;
+    render(); refreshCompare();
+    setMessage(`已套用長度 ${n}。`, "success");
+  });
+
+  $("randomParentsBtn").addEventListener("click", ()=>{
+    const n = Number($("length").value);
+    $("parent1").value = randomPermutation(n).join(" ");
+    $("parent2").value = randomPermutation(n).join(" ");
+    state.steps = []; state.stepIndex = 0;
+    render(); refreshCompare();
+    setMessage("已隨機產生兩個 parent。", "success");
+  });
+
+  $("randomCutsBtn").addEventListener("click", ()=>{
+    const n = Number($("length").value);
+    const [a,b] = randomCuts(n);
+    $("cut1").value = a+1; $("cut2").value = b+1;
+    setMessage(`已隨機設定 cut points = (${a+1}, ${b+1})。`, "success");
+  });
+
+  $("exampleBtn").addEventListener("click", ()=>{
+    const ex = {
+      PMX: {n:8, p1:[1,2,3,4,5,6,7,8], p2:[4,1,2,8,7,6,5,3], cuts:[3,6]},
+      OX:  {n:8, p1:[1,2,3,4,5,6,7,8], p2:[4,1,2,8,7,6,5,3], cuts:[3,6]},
+      LOX: {n:8, p1:[1,2,3,4,5,6,7,8], p2:[3,7,5,1,6,8,2,4], cuts:[3,5]},
+      CX:  {n:8, p1:[1,2,3,4,5,6,7,8], p2:[2,1,4,3,6,5,8,7], cuts:[2,5]},
+      ERX: {n:8, p1:[1,2,3,4,5,6,7,8], p2:[1,4,7,8,6,5,3,2], cuts:[3,6]}
+    }[$("method").value];
+    $("length").value = ex.n;
+    $("parent1").value = ex.p1.join(" ");
+    $("parent2").value = ex.p2.join(" ");
+    $("cut1").value = ex.cuts[0];
+    $("cut2").value = ex.cuts[1];
+    state.steps = []; state.stepIndex = 0;
+    render(); refreshCompare();
+    setMessage(`已載入 ${$("method").value} 示範案例。`, "success");
+  });
+
+  $("initBtn").addEventListener("click", ()=>{
+    stopPlay();
+    if (buildSteps()) refreshCompare();
+  });
+
+  $("nextBtn").addEventListener("click", ()=>{
+    if (!state.steps.length) {
+      if (!buildSteps()) return;
+    } else if (state.stepIndex < state.steps.length-1) {
+      state.stepIndex++;
+      render();
+    }
+  });
+
+  $("prevBtn").addEventListener("click", ()=>{
+    stopPlay();
+    if (state.stepIndex > 0) {
+      state.stepIndex--;
+      render();
+    }
+  });
+
+  $("playBtn").addEventListener("click", ()=>{
+    if (!state.steps.length) {
+      if (!buildSteps()) return;
+    }
+    stopPlay();
+    state.timer = setInterval(()=>{
+      if (state.stepIndex < state.steps.length-1) {
+        state.stepIndex++;
+        render();
+      } else stopPlay();
+    }, 1100);
+  });
+
+  $("pauseBtn").addEventListener("click", ()=>stopPlay());
+  $("resetBtn").addEventListener("click", ()=>{
+    stopPlay();
+    state.stepIndex = 0;
+    render();
+  });
+  $("compareBtn").addEventListener("click", refreshCompare);
+
+  initMethodText();
+  refreshCompare();
+  render();
+})();
+</script>
+</body>
+</html>

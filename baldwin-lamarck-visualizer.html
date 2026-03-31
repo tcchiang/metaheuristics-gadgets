@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SGA vs Lamarckian vs Baldwinian（4-bit 論文範例）</title>
+<style>
+  :root{
+    --bg:#f4f7fb;
+    --panel:#ffffff;
+    --line:#d9e2ec;
+    --text:#1f2937;
+    --muted:#6b7280;
+    --accent:#2563eb;
+    --accent2:#7c3aed;
+    --accent3:#059669;
+    --soft:#eef4ff;
+    --soft2:#f3e8ff;
+    --soft3:#ecfdf5;
+    --chip:#f8fafc;
+    --danger:#dc2626;
+    --ok:#16a34a;
+    --shadow:0 8px 24px rgba(15,23,42,.08);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:Arial,"Noto Sans TC","Microsoft JhengHei",sans-serif;color:var(--text);background:var(--bg)}
+  .app{min-height:100vh;display:grid;grid-template-rows:auto 1fr;gap:10px;padding:10px}
+  .top{
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);
+    padding:14px 16px;display:grid;grid-template-columns: 1.6fr 1.4fr;gap:18px;align-items:start;
+  }
+  .top h1{margin:0 0 6px;font-size:24px}
+  .sub{color:var(--muted);font-size:14px;line-height:1.5}
+  .controls{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:12px}
+  .field{display:flex;flex-direction:column;gap:6px}
+  label{font-weight:700;font-size:14px}
+  input[type="number"], input[type="range"]{
+    width:100%;
+  }
+  input[type="number"]{
+    padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:14px;
+  }
+  .buttons{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  button{
+    border:none;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;background:var(--accent);color:#fff;
+    box-shadow:0 2px 6px rgba(37,99,235,.18)
+  }
+  button.secondary{background:#475569}
+  button.good{background:var(--ok)}
+  button.warn{background:#d97706}
+  button.ghost{background:#e5eefc;color:#1746aa;box-shadow:none}
+  button:disabled{opacity:.55;cursor:not-allowed}
+  .timelineWrap{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin-top:10px}
+  .genBox{padding:10px 12px;border-radius:10px;background:#f8fbff;border:1px solid var(--line);font-weight:700;white-space:nowrap}
+  .notes{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .chip{padding:6px 10px;border-radius:999px;background:var(--chip);border:1px solid var(--line);font-size:13px}
+
+  .bottom{display:grid;grid-template-columns: repeat(3, minmax(0, 1fr));gap:10px;min-height:0;align-items:stretch}
+  .panel{
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);
+    display:flex;flex-direction:column;min-height:0;overflow:hidden;
+  }
+  .panelHeader{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+  .panelHeader h2{margin:0;font-size:20px}
+  .tag{padding:4px 10px;border-radius:999px;font-weight:700;font-size:12px}
+  .sga .tag{background:var(--soft);color:#1746aa}
+  .lamarckian .tag{background:var(--soft2);color:#6d28d9}
+  .baldwinian .tag{background:var(--soft3);color:#047857}
+
+  .upper{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
+  .summary{padding:10px 14px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+  .stat{background:#fafcff;border:1px solid #e8edf5;border-radius:12px;padding:8px 10px}
+  .stat .k{font-size:12px;color:var(--muted)}
+  .stat .v{font-size:18px;font-weight:800;margin-top:2px}
+  .dist{padding:10px 14px;border-bottom:1px solid var(--line);flex:0 0 auto}
+  .distTitle{font-weight:700;margin-bottom:8px}
+  .dist:has(.countList:empty){padding-bottom:6px}
+  .countList{display:flex;flex-wrap:wrap;gap:6px;max-height:none;overflow:visible;padding-right:0}
+  .countChip{padding:5px 8px;border-radius:999px;background:#f8fafc;border:1px solid #dbe4ee;font-size:12px}
+  .countChip.g0000{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.25);font-weight:700}
+  .countChip.g1111{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.25);font-weight:700}
+  .population{padding:10px 14px;flex:1 1 auto;min-height:96px;overflow:auto}
+  .popGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:8px}
+  .ind{
+    border-radius:10px;border:1px solid #d9e3ef;background:#fff;padding:8px 6px;text-align:center;font-weight:800;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing:.5px;
+  }
+  .ind.g0000{background:rgba(59,130,246,.10);border-color:rgba(59,130,246,.4);color:#1746aa}
+  .ind.g1111{background:rgba(239,68,68,.10);border-color:rgba(239,68,68,.35);color:#b91c1c}
+  .ind.best{outline:3px solid rgba(16,185,129,.18);position:relative}
+  .ind.best::after{content:"★";position:absolute;top:2px;right:4px;font-size:11px;color:#ca8a04}
+
+  .lower{display:flex;flex-direction:column;flex:1 1 320px;min-height:260px}
+  .chartHeader{padding:10px 14px;border-top:1px solid var(--line);font-weight:700;display:flex;justify-content:space-between;align-items:center}
+  canvas{width:100%;height:100%;display:block}
+  .chartArea{padding:0 8px 8px;flex:1 1 auto;min-height:180px}
+
+  .legend{display:flex;gap:10px;align-items:center;font-size:12px;color:var(--muted)}
+  .legendItem{display:flex;gap:6px;align-items:center}
+  .dot{width:10px;height:10px;border-radius:999px;display:inline-block}
+  .blue{background:#2563eb}.red{background:#dc2626}.current{background:#0f172a}
+
+  @media (max-width: 1200px){
+    .app{min-height:auto;grid-template-rows:auto auto}
+    .top{grid-template-columns:1fr}
+    .bottom{grid-template-columns:1fr}
+    .panel{min-height:720px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div>
+      <h1>4-bit 論文範例：SGA / Lamarckian / Baldwinian</h1>
+      <div class="sub">
+        問題為 4-bit 最大化，使用 one-point crossover、no mutation、generational model。<br>
+        三種方法共用同一組初始 population，並同步顯示每一代 population 內容，以及 <code>0000</code> 與 <code>1111</code> 的比例曲線。
+      </div>
+      <div class="notes">
+        <div class="chip">Function 1：0000 = 28，0001 = 26，…，1110 = 0，1111 = 30</div>
+        <div class="chip">Selection：roulette-wheel</div>
+        <div class="chip">Learning：一步 steepest-ascent（Hamming distance 1）</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="controls">
+        <div class="field">
+          <label for="popSize">Population Size</label>
+          <input id="popSize" type="number" min="4" max="256" step="2" value="48" />
+        </div>
+        <div class="field">
+          <label for="crossoverRate">Crossover Rate</label>
+          <input id="crossoverRate" type="number" min="0" max="1" step="0.01" value="0.60" />
+        </div>
+        <div class="field">
+          <label for="generationCount">Generation Number</label>
+          <input id="generationCount" type="number" min="1" max="200" step="1" value="30" />
+        </div>
+        <div class="field">
+          <label for="seed">Random Seed</label>
+          <input id="seed" type="number" step="1" value="42" />
+        </div>
+      </div>
+      <div class="buttons">
+        <button id="runBtn">Run / 重新執行</button>
+        <button id="prevBtn" class="secondary">上一步</button>
+        <button id="nextBtn" class="secondary">下一步</button>
+        <button id="playBtn" class="good">自動播放</button>
+        <button id="pauseBtn" class="warn">暫停</button>
+        <button id="resetBtn" class="ghost">回到第 0 代</button>
+      </div>
+      <div class="timelineWrap">
+        <input id="generationSlider" type="range" min="0" max="30" step="1" value="0" />
+        <div class="genBox">目前世代：<span id="generationLabel">0 / 30</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <section class="panel sga" id="panel-sga">
+      <div class="upper">
+        <div class="panelHeader"><h2>SGA</h2><div class="tag">No learning</div></div>
+        <div class="summary" id="summary-sga"></div>
+        <div class="dist">
+          <div class="distTitle">Population 分布統計</div>
+          <div class="countList" id="counts-sga"></div>
+        </div>
+        <div class="population"><div class="popGrid" id="pop-sga"></div></div>
+      </div>
+      <div class="lower">
+        <div class="chartHeader">
+          <span>0000 / 1111 佔比曲線</span>
+          <div class="legend">
+            <span class="legendItem"><span class="dot blue"></span>0000</span>
+            <span class="legendItem"><span class="dot red"></span>1111</span>
+            <span class="legendItem"><span class="dot current"></span>目前世代</span>
+          </div>
+        </div>
+        <div class="chartArea"><canvas id="chart-sga"></canvas></div>
+      </div>
+    </section>
+
+    <section class="panel lamarckian" id="panel-lamarckian">
+      <div class="upper">
+        <div class="panelHeader"><h2>Lamarckian</h2><div class="tag">Rewrite genotype</div></div>
+        <div class="summary" id="summary-lamarckian"></div>
+        <div class="dist">
+          <div class="distTitle">Population 分布統計</div>
+          <div class="countList" id="counts-lamarckian"></div>
+        </div>
+        <div class="population"><div class="popGrid" id="pop-lamarckian"></div></div>
+      </div>
+      <div class="lower">
+        <div class="chartHeader">
+          <span>0000 / 1111 佔比曲線</span>
+          <div class="legend">
+            <span class="legendItem"><span class="dot blue"></span>0000</span>
+            <span class="legendItem"><span class="dot red"></span>1111</span>
+            <span class="legendItem"><span class="dot current"></span>目前世代</span>
+          </div>
+        </div>
+        <div class="chartArea"><canvas id="chart-lamarckian"></canvas></div>
+      </div>
+    </section>
+
+    <section class="panel baldwinian" id="panel-baldwinian">
+      <div class="upper">
+        <div class="panelHeader"><h2>Baldwinian</h2><div class="tag">Evaluate only</div></div>
+        <div class="summary" id="summary-baldwinian"></div>
+        <div class="dist">
+          <div class="distTitle">Population 分布統計</div>
+          <div class="countList" id="counts-baldwinian"></div>
+        </div>
+        <div class="population"><div class="popGrid" id="pop-baldwinian"></div></div>
+      </div>
+      <div class="lower">
+        <div class="chartHeader">
+          <span>0000 / 1111 佔比曲線</span>
+          <div class="legend">
+            <span class="legendItem"><span class="dot blue"></span>0000</span>
+            <span class="legendItem"><span class="dot red"></span>1111</span>
+            <span class="legendItem"><span class="dot current"></span>目前世代</span>
+          </div>
+        </div>
+        <div class="chartArea"><canvas id="chart-baldwinian"></canvas></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+  const FITNESS = {
+    "0000": 28, "0001": 26, "0010": 24, "0011": 22,
+    "0100": 20, "0101": 18, "0110": 16, "0111": 14,
+    "1000": 12, "1001": 10, "1010": 8,  "1011": 6,
+    "1100": 4,  "1101": 2,  "1110": 0,  "1111": 30
+  };
+
+  const state = {
+    results: null,
+    currentGen: 0,
+    timer: null,
+  };
+
+  class RNG {
+    constructor(seed) {
+      this.seed = (Number(seed) >>> 0) || 1;
+    }
+    next() {
+      this.seed = (1664525 * this.seed + 1013904223) >>> 0;
+      return this.seed / 4294967296;
+    }
+    randint(a, b) {
+      return Math.floor(this.next() * (b - a + 1)) + a;
+    }
+    choice(arr) {
+      return arr[this.randint(0, arr.length - 1)];
+    }
+  }
+
+  const $ = id => document.getElementById(id);
+
+  function rawFitness(g) { return FITNESS[g]; }
+
+  function neighbors(g) {
+    const arr = [];
+    for (let i = 0; i < g.length; i++) {
+      const bits = g.split("");
+      bits[i] = bits[i] === "0" ? "1" : "0";
+      arr.push(bits.join(""));
+    }
+    return arr;
+  }
+
+  function oneStepSteepestAscent(g) {
+    const candidates = [g, ...neighbors(g)];
+    let bestVal = -Infinity;
+    let best = [];
+    for (const x of candidates) {
+      const f = rawFitness(x);
+      if (f > bestVal) {
+        bestVal = f;
+        best = [x];
+      } else if (f === bestVal) {
+        best.push(x);
+      }
+    }
+    if (best.includes(g)) return g;
+    best.sort();
+    return best[0];
+  }
+
+  function baldwinianFitness(g) {
+    return rawFitness(oneStepSteepestAscent(g));
+  }
+
+  function randomGenome(rng) {
+    let s = "";
+    for (let i = 0; i < 4; i++) s += rng.next() < 0.5 ? "0" : "1";
+    return s;
+  }
+
+  function initializePopulation(popSize, rng) {
+    const pop = [];
+    for (let i = 0; i < popSize; i++) pop.push(randomGenome(rng));
+    return pop;
+  }
+
+  function selectionFitness(g, mode) {
+    if (mode === "baldwinian") return baldwinianFitness(g);
+    return rawFitness(g);
+  }
+
+  function rouletteSelect(pop, mode, rng) {
+    const fits = pop.map(g => selectionFitness(g, mode));
+    const total = fits.reduce((a,b)=>a+b,0);
+    if (total <= 0) return rng.choice(pop);
+    const r = rng.next() * total;
+    let acc = 0;
+    for (let i = 0; i < pop.length; i++) {
+      acc += fits[i];
+      if (acc >= r) return pop[i];
+    }
+    return pop[pop.length - 1];
+  }
+
+  function onePointCrossover(p1, p2, rate, rng) {
+    if (rng.next() >= rate) return [p1, p2];
+    const cut = rng.randint(1, p1.length - 1);
+    return [p1.slice(0, cut) + p2.slice(cut), p2.slice(0, cut) + p1.slice(cut)];
+  }
+
+  function makeNextGeneration(pop, mode, rate, rng) {
+    const next = [];
+    while (next.length < pop.length) {
+      const p1 = rouletteSelect(pop, mode, rng);
+      const p2 = rouletteSelect(pop, mode, rng);
+      let [c1, c2] = onePointCrossover(p1, p2, rate, rng);
+      if (mode === "lamarckian") {
+        c1 = oneStepSteepestAscent(c1);
+        c2 = oneStepSteepestAscent(c2);
+      }
+      next.push(c1);
+      if (next.length < pop.length) next.push(c2);
+    }
+    return next;
+  }
+
+  function countsOf(pop) {
+    const m = {};
+    for (const g of pop) m[g] = (m[g] || 0) + 1;
+    return m;
+  }
+
+  function bestIndividual(pop, mode) {
+    if (mode === "baldwinian") {
+      let best = pop[0], bestFit = baldwinianFitness(pop[0]);
+      for (const g of pop) {
+        const f = baldwinianFitness(g);
+        if (f > bestFit || (f === bestFit && g < best)) {
+          best = g; bestFit = f;
+        }
+      }
+      return {genotype: best, fitness: bestFit};
+    }
+    let best = pop[0], bestFit = rawFitness(pop[0]);
+    for (const g of pop) {
+      const f = rawFitness(g);
+      if (f > bestFit || (f === bestFit && g < best)) {
+        best = g; bestFit = f;
+      }
+    }
+    return {genotype: best, fitness: bestFit};
+  }
+
+  function runMode(mode, initialPop, generations, rate, seedOffset) {
+    const rng = new RNG(seedOffset);
+    let pop = initialPop.slice();
+    const history = [];
+    for (let gen = 0; gen <= generations; gen++) {
+      const counts = countsOf(pop);
+      const best = bestIndividual(pop, mode);
+      history.push({
+        generation: gen,
+        population: pop.slice(),
+        counts,
+        freq0000: (counts["0000"] || 0) / pop.length,
+        freq1111: (counts["1111"] || 0) / pop.length,
+        best,
+      });
+      if (gen < generations) pop = makeNextGeneration(pop, mode, rate, rng);
+    }
+    return history;
+  }
+
+  function simulateAll() {
+    const popSize = clampEven(parseInt($("popSize").value, 10) || 48, 4, 256);
+    const crossoverRate = clamp(parseFloat($("crossoverRate").value) || 0.6, 0, 1);
+    const generations = clamp(parseInt($("generationCount").value, 10) || 30, 1, 200);
+    const seed = parseInt($("seed").value, 10) || 42;
+
+    $("popSize").value = popSize;
+    $("crossoverRate").value = crossoverRate.toFixed(2);
+    $("generationCount").value = generations;
+
+    const initRng = new RNG(seed);
+    const initialPop = initializePopulation(popSize, initRng);
+
+    state.results = {
+      generations,
+      params: { popSize, crossoverRate, generations, seed },
+      sga: runMode("sga", initialPop, generations, crossoverRate, seed + 1001),
+      lamarckian: runMode("lamarckian", initialPop, generations, crossoverRate, seed + 2002),
+      baldwinian: runMode("baldwinian", initialPop, generations, crossoverRate, seed + 3003),
+    };
+
+    const slider = $("generationSlider");
+    slider.max = generations;
+    state.currentGen = 0;
+    render();
+  }
+
+  function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
+  function clampEven(x, a, b) {
+    x = clamp(x, a, b);
+    if (x % 2 !== 0) x += 1;
+    return clamp(x, a, b);
+  }
+
+  function render() {
+    if (!state.results) return;
+    const g = state.currentGen;
+    $("generationSlider").value = g;
+    $("generationLabel").textContent = `${g} / ${state.results.generations}`;
+
+    renderMode("sga");
+    renderMode("lamarckian");
+    renderMode("baldwinian");
+  }
+
+  function renderMode(mode) {
+    const entry = state.results[mode][state.currentGen];
+    const summaryEl = $("summary-" + mode);
+    const countsEl = $("counts-" + mode);
+    const popEl = $("pop-" + mode);
+
+    const count0000 = entry.counts["0000"] || 0;
+    const count1111 = entry.counts["1111"] || 0;
+
+    summaryEl.innerHTML = `
+      <div class="stat"><div class="k">Best genotype</div><div class="v">${entry.best.genotype}</div></div>
+      <div class="stat"><div class="k">Best fitness</div><div class="v">${entry.best.fitness}</div></div>
+      <div class="stat"><div class="k">0000 ratio</div><div class="v">${entry.freq0000.toFixed(3)}</div></div>
+      <div class="stat"><div class="k">1111 ratio</div><div class="v">${entry.freq1111.toFixed(3)}</div></div>
+    `;
+
+    const keys = Object.keys(entry.counts).sort();
+    countsEl.innerHTML = keys.map(k => {
+      const cls = k === "0000" ? "g0000" : (k === "1111" ? "g1111" : "");
+      return `<div class="countChip ${cls}">${k} × ${entry.counts[k]}</div>`;
+    }).join("");
+
+    popEl.innerHTML = entry.population.map(geno => {
+      const classes = ["ind"];
+      if (geno === "0000") classes.push("g0000");
+      if (geno === "1111") classes.push("g1111");
+      if (geno === entry.best.genotype) classes.push("best");
+      return `<div class="${classes.join(" ")}">${geno}</div>`;
+    }).join("");
+
+    drawChart($("chart-" + mode), state.results[mode], state.currentGen);
+  }
+
+  function drawChart(canvas, history, currentGen) {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const width = Math.max(320, Math.floor(rect.width));
+    const height = Math.max(180, Math.floor(rect.height));
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,width,height);
+
+    const pad = {l:42,r:16,t:14,b:28};
+    const cw = width - pad.l - pad.r;
+    const ch = height - pad.t - pad.b;
+
+    // background
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0,0,width,height);
+
+    // grid and axes
+    ctx.strokeStyle = "#e5edf5";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 0; i <= 5; i++) {
+      const y = pad.t + ch * i / 5;
+      ctx.moveTo(pad.l, y);
+      ctx.lineTo(pad.l + cw, y);
+    }
+    for (let i = 0; i <= 5; i++) {
+      const x = pad.l + cw * i / 5;
+      ctx.moveTo(x, pad.t);
+      ctx.lineTo(x, pad.t + ch);
+    }
+    ctx.stroke();
+
+    ctx.strokeStyle = "#94a3b8";
+    ctx.beginPath();
+    ctx.moveTo(pad.l, pad.t);
+    ctx.lineTo(pad.l, pad.t + ch);
+    ctx.lineTo(pad.l + cw, pad.t + ch);
+    ctx.stroke();
+
+    const maxGen = history.length - 1;
+    const xOf = gen => pad.l + (maxGen === 0 ? 0 : cw * gen / maxGen);
+    const yOf = val => pad.t + ch * (1 - val);
+
+    // current generation marker
+    const xCur = xOf(currentGen);
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = 1.2;
+    ctx.setLineDash([5,4]);
+    ctx.beginPath();
+    ctx.moveTo(xCur, pad.t);
+    ctx.lineTo(xCur, pad.t + ch);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // line helper
+    function drawLine(values, color) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      values.forEach((v, i) => {
+        const x = xOf(i);
+        const y = yOf(v);
+        if (i === 0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      });
+      ctx.stroke();
+
+      values.forEach((v, i) => {
+        const x = xOf(i), y = yOf(v);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, i === currentGen ? 4 : 2.7, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    drawLine(history.map(h => h.freq0000), "#2563eb");
+    drawLine(history.map(h => h.freq1111), "#dc2626");
+
+    // labels
+    ctx.fillStyle = "#64748b";
+    ctx.font = "12px Arial";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    for (let i = 0; i <= 5; i++) {
+      const val = (1 - i/5).toFixed(1);
+      ctx.fillText(val, pad.l - 8, pad.t + ch * i / 5);
+    }
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    for (let i = 0; i <= 5; i++) {
+      const gen = Math.round(maxGen * i / 5);
+      ctx.fillText(String(gen), pad.l + cw * i / 5, pad.t + ch + 6);
+    }
+  }
+
+  function step(delta) {
+    if (!state.results) return;
+    state.currentGen = clamp(state.currentGen + delta, 0, state.results.generations);
+    render();
+  }
+
+  function play() {
+    stop();
+    state.timer = setInterval(() => {
+      if (!state.results) return;
+      if (state.currentGen >= state.results.generations) {
+        stop();
+        return;
+      }
+      state.currentGen += 1;
+      render();
+    }, 700);
+  }
+
+  function stop() {
+    if (state.timer) clearInterval(state.timer);
+    state.timer = null;
+  }
+
+  $("runBtn").addEventListener("click", () => { stop(); simulateAll(); });
+  $("prevBtn").addEventListener("click", () => step(-1));
+  $("nextBtn").addEventListener("click", () => step(1));
+  $("playBtn").addEventListener("click", play);
+  $("pauseBtn").addEventListener("click", stop);
+  $("resetBtn").addEventListener("click", () => { stop(); state.currentGen = 0; render(); });
+  $("generationSlider").addEventListener("input", (e) => {
+    state.currentGen = parseInt(e.target.value, 10) || 0;
+    render();
+  });
+
+  window.addEventListener("resize", () => render());
+
+  simulateAll();
+})();
+</script>
+</body>
+</html>
